@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { ArticleQueryDto } from './dto/article-query.dto';
@@ -15,10 +15,5 @@ export class ArticlesController {
   @Get()
   findAll(@Query() query: ArticleQueryDto) {
     return this.articlesService.findAll(query);
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.articlesService.findOne(id);
   }
 }

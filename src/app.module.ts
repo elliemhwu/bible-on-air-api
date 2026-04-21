@@ -11,6 +11,7 @@ import { TemplatesModule } from './templates/templates.module';
 import { BibleModule } from './bible/bible.module';
 import { PublishersModule } from './publishers/publishers.module';
 import { PublicationsModule } from './publications/publications.module';
+import { MagazinesModule } from './magazines/magazines.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { PublicationsModule } from './publications/publications.module';
     BibleModule,
     PublishersModule,
     PublicationsModule,
+    MagazinesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
