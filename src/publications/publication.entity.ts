@@ -14,8 +14,7 @@ export enum PublicationType {
   BOOK = 'book',
 }
 
-@Entity('publications')
-export class Publication {
+class PublicationColumns {
   @PrimaryColumn({ type: 'varchar', length: 100 })
   uid: string;
 
@@ -34,13 +33,16 @@ export class Publication {
   @Column({ type: 'varchar', length: 100 })
   publisherUid: string;
 
-  @ManyToOne(() => Publisher, (publisher) => publisher.publications)
-  @JoinColumn({ name: 'publisherUid', referencedColumnName: 'uid' })
-  publisher: Publisher;
-
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
+}
+
+@Entity('publications')
+export class Publication extends PublicationColumns {
+  @ManyToOne(() => Publisher, (publisher) => publisher.publications)
+  @JoinColumn({ name: 'publisherUid', referencedColumnName: 'uid' })
+  publisher: Publisher;
 }

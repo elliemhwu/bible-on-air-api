@@ -8,8 +8,7 @@ import {
 } from 'typeorm';
 import { Publication } from '../publications/publication.entity';
 
-@Entity('publishers')
-export class Publisher {
+class PublisherColumns {
   @PrimaryColumn({ type: 'varchar', length: 100 })
   uid: string;
 
@@ -21,7 +20,10 @@ export class Publisher {
 
   @UpdateDateColumn()
   updatedAt: Date;
+}
 
+@Entity('publishers')
+export class Publisher extends PublisherColumns {
   @OneToMany(() => Publication, (publication) => publication.publisher)
   publications: Publication[];
 }
