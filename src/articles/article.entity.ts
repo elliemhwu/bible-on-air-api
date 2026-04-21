@@ -33,6 +33,9 @@ class ArticleColumns {
   @Column({ type: 'int', nullable: true })
   templateId: number | null;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  coverImageUrl: string | null;
+
   @Column({ type: 'timestamptz', nullable: true })
   publishedAt: Date | null;
 

@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import databaseConfig from './config/database.config';
@@ -12,6 +14,7 @@ import { BibleModule } from './bible/bible.module';
 import { PublishersModule } from './publishers/publishers.module';
 import { PublicationsModule } from './publications/publications.module';
 import { MagazinesModule } from './magazines/magazines.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -26,6 +29,10 @@ import { MagazinesModule } from './magazines/magazines.module';
       useFactory: (configService: ConfigService) =>
         configService.get('database'),
     }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
     AuthModule,
     UsersModule,
     ArticlesModule,
@@ -34,6 +41,7 @@ import { MagazinesModule } from './magazines/magazines.module';
     PublishersModule,
     PublicationsModule,
     MagazinesModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

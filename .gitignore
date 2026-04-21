@@ -29,5 +29,8 @@ npm-debug.log*
 *.sln
 *.sw?
 
+# uploads
+/uploads
+
 # test coverage
 /coverage

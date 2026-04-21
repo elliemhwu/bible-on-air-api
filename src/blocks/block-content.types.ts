@@ -9,6 +9,7 @@ export interface VerseRange {
 export interface VerseBlockContent {
   range: VerseRange;
   cachedText?: string;
+  imageUrl?: string;
 }
 
 export interface QuestionsBlockContent {
