@@ -2,7 +2,6 @@ import {
   IsArray,
   IsDateString,
   IsEnum,
-  IsNotEmpty,
   IsNumber,
   IsObject,
   IsOptional,
@@ -10,7 +9,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ArticleStatus } from '../article.entity';
+import { ArticleStatus } from '../../articles/article.entity';
 import { BlockType } from '../../blocks/block.entity';
 import { BlockContent } from '../../blocks/block-content.types';
 
@@ -30,11 +29,7 @@ export class CreateBlockDto {
   content?: BlockContent;
 }
 
-export class CreateArticleDto {
-  @IsNotEmpty()
-  @IsString()
-  publicationUid: string;
-
+export class CreateMagazineArticleDto {
   @IsDateString()
   date: string;
 
