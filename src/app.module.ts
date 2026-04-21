@@ -9,6 +9,8 @@ import { UsersModule } from './users/users.module';
 import { ArticlesModule } from './articles/articles.module';
 import { TemplatesModule } from './templates/templates.module';
 import { BibleModule } from './bible/bible.module';
+import { PublishersModule } from './publishers/publishers.module';
+import { PublicationsModule } from './publications/publications.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { BibleModule } from './bible/bible.module';
     ArticlesModule,
     TemplatesModule,
     BibleModule,
+    PublishersModule,
+    PublicationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
