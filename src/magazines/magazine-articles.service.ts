@@ -17,6 +17,7 @@ export class MagazineArticlesService {
     const article = this.articleRepo.create({
       publicationUid: uid,
       date: dto.date,
+      title: dto.title,
       status: dto.status ?? ArticleStatus.DRAFT,
       templateId: null,
       coverImageUrl: null,
@@ -64,6 +65,7 @@ export class MagazineArticlesService {
   async update(uid: string, date: string, dto: UpdateMagazineArticleDto): Promise<Article> {
     const article = await this.findByDate(uid, date);
 
+    if (dto.title !== undefined) article.title = dto.title;
     if (dto.coverImageUrl !== undefined) article.coverImageUrl = dto.coverImageUrl;
     if (dto.status !== undefined) article.status = dto.status;
     if (dto.date !== undefined) article.date = dto.date;

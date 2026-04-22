@@ -27,6 +27,9 @@ class ArticleColumns {
   @Column({ type: 'date' })
   date: string;
 
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  title: string | null;
+
   @Column({ type: 'varchar', length: 50 })
   status: ArticleStatus;
 

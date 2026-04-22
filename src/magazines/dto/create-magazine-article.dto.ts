@@ -6,6 +6,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -32,6 +33,10 @@ export class CreateBlockDto {
 export class CreateMagazineArticleDto {
   @IsDateString()
   date: string;
+
+  @IsString()
+  @MaxLength(200)
+  title: string;
 
   @IsOptional()
   @IsEnum(ArticleStatus)
