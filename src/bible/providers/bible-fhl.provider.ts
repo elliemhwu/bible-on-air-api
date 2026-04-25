@@ -11,6 +11,7 @@ interface FhlRecord {
 
 interface FhlResponse {
   status: string;
+  version: string;
   record_count: number;
   record: FhlRecord[];
 }
@@ -23,6 +24,8 @@ const FHL_BASE_URL = 'https://bible.fhl.net/json/qb.php';
  */
 @Injectable()
 export class BibleFhlProvider implements BibleProvider {
+  readonly version = 'nstrunv';
+
   async getVerses(range: VerseRange): Promise<Verse[]> {
     const refs = expandVerseRange(range);
 
@@ -48,7 +51,7 @@ export class BibleFhlProvider implements BibleProvider {
         chineses: range.abbrZh,
         chap: String(chapter),
         sec,
-        version: 'nstrunv',
+        version: this.version,
         gb: '0',
       });
       const url = `${FHL_BASE_URL}?${params}`;
@@ -73,6 +76,7 @@ export class BibleFhlProvider implements BibleProvider {
           chapter: record.chap,
           verse: record.sec,
           text: record.bible_text,
+          version: data.version,
         });
       }
     }

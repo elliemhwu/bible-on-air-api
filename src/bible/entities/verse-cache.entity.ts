@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 
 @Entity('verse_cache')
-@Unique(['abbrZh', 'chapter', 'verse'])
+@Unique(['abbrZh', 'chapter', 'verse', 'version'])
 export class VerseCacheEntity {
   @PrimaryGeneratedColumn()
   id: number;
@@ -23,6 +23,9 @@ export class VerseCacheEntity {
 
   @Column('text')
   text: string;
+
+  @Column({ length: 32 })
+  version: string;
 
   @CreateDateColumn()
   cachedAt: Date;

@@ -6,8 +6,9 @@ import { VerseRange } from '../bible.types';
 function fhlResponse(
   records: Array<{ chap: number; sec: number; bible_text: string }>,
   status = 'success',
+  version = 'nstrunv',
 ) {
-  return { status, record_count: records.length, record: records };
+  return { status, version, record_count: records.length, record: records };
 }
 
 describe('BibleFhlProvider', () => {
@@ -100,7 +101,7 @@ describe('BibleFhlProvider', () => {
       const result = await provider.getVerses({ abbrZh: '出', chapterStart: 13, verseStart: 19 });
 
       expect(result).toEqual([
-        { abbrZh: '出', chapter: 13, verse: 19, text: '摩西把約瑟的骸骨一同帶去' },
+        { abbrZh: '出', chapter: 13, verse: 19, text: '摩西把約瑟的骸骨一同帶去', version: 'nstrunv' },
       ]);
     });
 

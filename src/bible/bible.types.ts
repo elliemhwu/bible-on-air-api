@@ -17,6 +17,7 @@ export interface Verse {
   chapter: number;
   verse: number;
   text: string;
+  version: string; // 聖經版本，e.g. "nstrunv"
 }
 
 export interface VerseResult {
