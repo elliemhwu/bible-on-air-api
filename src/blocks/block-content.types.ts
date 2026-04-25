@@ -7,8 +7,7 @@ export interface VerseRange {
 }
 
 export interface VerseBlockContent {
-  range: VerseRange;
-  cachedText?: string;
+  ranges: VerseRange[];
   imageUrl?: string;
 }
 

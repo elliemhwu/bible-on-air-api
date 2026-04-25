@@ -20,6 +20,6 @@ export interface Verse {
 }
 
 export interface VerseResult {
-  range: VerseRange;
+  ranges: VerseRange[];
   verses: Verse[];
 }

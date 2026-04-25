@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { BibleCacheService } from './bible-cache.service';
 import { BibleFhlProvider } from './bible-fhl.provider';
-import { VerseRange, VerseResult } from './bible.types';
+import { VerseRange, VerseResult, Verse } from './bible.types';
 
 @Injectable()
 export class BibleService {
@@ -10,14 +10,16 @@ export class BibleService {
     private readonly provider: BibleFhlProvider,
   ) {}
 
-  async getVerses(range: VerseRange): Promise<VerseResult> {
-    const cached = await this.cache.findVerses(range);
-    if (cached) {
-      return { range, verses: cached };
+  async getVerses(ranges: VerseRange[]): Promise<VerseResult> {
+    const allVerses: Verse[] = [];
+    for (const range of ranges) {
+      let verses = await this.cache.findVerses(range);
+      if (!verses) {
+        verses = await this.provider.getVerses(range);
+        await this.cache.saveVerses(verses);
+      }
+      allVerses.push(...verses);
     }
-
-    const verses = await this.provider.getVerses(range);
-    await this.cache.saveVerses(verses);
-    return { range, verses };
+    return { ranges, verses: allVerses };
   }
 }
