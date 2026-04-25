@@ -1,6 +1,6 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
 import { BibleProvider } from './bible-provider.interface';
-import { Verse, VerseRange } from './bible.types';
+import { Verse, VerseRange } from '../bible.types';
 
 /**
  * 信望愛（FHL）聖經 API provider。

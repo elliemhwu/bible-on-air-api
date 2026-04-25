@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BibleCacheService } from './bible-cache.service';
-import { BibleFhlProvider } from './bible-fhl.provider';
+import { BibleFhlProvider } from './providers/bible-fhl.provider';
 import { VerseRange, VerseResult, Verse } from './bible.types';
 
 @Injectable()

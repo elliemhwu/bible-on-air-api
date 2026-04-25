@@ -1,4 +1,4 @@
-import { Verse, VerseRange } from './bible.types';
+import { Verse, VerseRange } from '../bible.types';
 
 export interface BibleProvider {
   getVerses(range: VerseRange): Promise<Verse[]>;

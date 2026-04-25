@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { expandVerseRange } from './bible-books.utils';
+import { expandVerseRange } from './utils/bible-books.utils';
 import { Verse, VerseRange } from './bible.types';
-import { VerseCacheEntity } from './verse-cache.entity';
+import { VerseCacheEntity } from './entities/verse-cache.entity';
 
 @Injectable()
 export class BibleCacheService {

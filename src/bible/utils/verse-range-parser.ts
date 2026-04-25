@@ -1,6 +1,6 @@
-import { BIBLE_BOOKS } from './bible-books.constant';
+import { BIBLE_BOOKS } from '../bible-books.constant';
 import { findBibleBook } from './bible-books.utils';
-import { VerseRange } from './bible.types';
+import { VerseRange } from '../bible.types';
 
 type BookPattern = { pattern: string; abbrZh: string };
 
