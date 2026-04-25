@@ -1,5 +1,5 @@
 export interface VerseRange {
-  book: string;
+  abbrZh: string;
   chapterStart: number;
   verseStart: number;
   chapterEnd?: number;
