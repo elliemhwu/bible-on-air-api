@@ -2,6 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Article, ArticleStatus } from '../articles/article.entity';
+import { BibleService } from '../bible/bible.service';
+import { BlockType } from '../blocks/block.entity';
+import { VerseBlockContent } from '../blocks/block-content.types';
 import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
 import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
 import { UpdateMagazineArticleDto } from './dto/update-magazine-article.dto';
@@ -11,6 +14,7 @@ export class MagazineArticlesService {
   constructor(
     @InjectRepository(Article)
     private readonly articleRepo: Repository<Article>,
+    private readonly bibleService: BibleService,
   ) {}
 
   async create(uid: string, dto: CreateMagazineArticleDto): Promise<Article> {
@@ -46,7 +50,7 @@ export class MagazineArticlesService {
     return qb.getMany();
   }
 
-  async findByDate(uid: string, date: string): Promise<Article> {
+  async findByDate(uid: string, date: string) {
     const article = await this.articleRepo
       .createQueryBuilder('article')
       .where('article.publicationUid = :uid', { uid })
@@ -59,7 +63,17 @@ export class MagazineArticlesService {
       throw new NotFoundException(`No article for ${uid} on ${date}`);
     }
 
-    return article;
+    const blocks = await Promise.all(
+      article.blocks.map(async (block) => {
+        if (block.type !== BlockType.VERSE || !block.content) return block;
+        const { verses } = await this.bibleService.getVerses(
+          (block.content as VerseBlockContent).ranges,
+        );
+        return { ...block, verses };
+      }),
+    );
+
+    return { ...article, blocks };
   }
 
   async update(uid: string, date: string, dto: UpdateMagazineArticleDto): Promise<Article> {
