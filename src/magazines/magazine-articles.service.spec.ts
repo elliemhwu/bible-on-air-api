@@ -184,8 +184,8 @@ describe('MagazineArticlesService', () => {
 
       const result = await service.findByDate(UID, '2026-04-20');
 
-      expect(bibleService.getVerses).toHaveBeenCalledWith(verseContent.ranges);
-      expect(result.blocks[0]).toMatchObject({ verses });
+      expect(bibleService.getVerses).toHaveBeenCalledWith([{ abbrZh: '出', chapterStart: 13, verseStart: 19 }]);
+      expect(result.blocks[0].content).toMatchObject({ verses });
     });
 
     it('found with non-verse block → does not call BibleService', async () => {

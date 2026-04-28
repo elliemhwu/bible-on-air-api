@@ -67,17 +67,16 @@ export class MagazineArticlesService {
       throw new NotFoundException(`No article for ${uid} on ${date}`);
     }
 
-    const blocks = await Promise.all(
+    await Promise.all(
       article.blocks.map(async (block) => {
-        if (block.type !== BlockType.VERSE || !block.content) return block;
+        if (block.type !== BlockType.VERSE || !block.content) return;
 
         const { ranges } = block.content as VerseBlockContent;
-        const content = await this.bibleService.getVerses(ranges);
-        return { ...block, content };
+        Object.assign(block.content, await this.bibleService.getVerses(ranges));
       }),
     );
 
-    return { ...article, blocks };
+    return article;
   }
 
   async update(
