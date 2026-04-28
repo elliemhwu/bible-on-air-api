@@ -177,7 +177,10 @@ describe('MagazineArticlesService', () => {
       articleRepo.createQueryBuilder.mockReturnValue(qb);
 
       const verses = [{ abbrZh: '出', chapter: 13, verse: 19, text: '骸骨', version: 'nstrunv' }];
-      bibleService.getVerses.mockResolvedValueOnce({ ranges: verseContent.ranges, verses });
+      bibleService.getVerses.mockResolvedValueOnce({
+        ranges: [{ abbrZh: '出', zh: '出埃及記', en: 'Exodus', abbrEn: 'Exod', chapterStart: 13, verseStart: 19 }],
+        verses,
+      });
 
       const result = await service.findByDate(UID, '2026-04-20');
 

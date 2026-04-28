@@ -2,7 +2,7 @@ import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { parseVerseRange } from './utils/verse-range-parser';
 import { BibleService } from './bible.service';
-import { VerseResult } from './bible.types';
+import { VerseRange, VerseResultResponse } from './bible.types';
 
 @ApiTags('Bible')
 @Controller('bible')
@@ -14,10 +14,10 @@ export class BibleController {
   @ApiQuery({ name: 'ref', description: 'Verse reference, e.g. 出13:19-21 or Exodus 13:19-21', example: '出13:19-21' })
   @ApiResponse({ status: 200, description: 'Returns parsed range and verse text' })
   @ApiResponse({ status: 400, description: 'Missing or invalid ref parameter' })
-  async getVerses(@Query('ref') ref: string): Promise<VerseResult> {
+  async getVerses(@Query('ref') ref: string): Promise<VerseResultResponse> {
     if (!ref) throw new BadRequestException('ref query param is required');
 
-    let range;
+    let range: VerseRange;
     try {
       range = parseVerseRange(ref);
     } catch (err) {

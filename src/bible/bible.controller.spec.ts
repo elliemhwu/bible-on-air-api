@@ -1,10 +1,10 @@
 import { BibleController } from './bible.controller';
 import { BibleService } from './bible.service';
 import { BadRequestException } from '@nestjs/common';
-import { VerseResult } from './bible.types';
+import { VerseResultResponse } from './bible.types';
 
-const MOCK_RESULT: VerseResult = {
-  ranges: [{ abbrZh: '出', chapterStart: 13, verseStart: 19 }],
+const MOCK_RESULT: VerseResultResponse = {
+  ranges: [{ abbrZh: '出', zh: '出埃及記', en: 'Exodus', abbrEn: 'Exod', chapterStart: 13, verseStart: 19 }],
   verses: [{ abbrZh: '出', chapter: 13, verse: 19, text: '摩西把約瑟的骸骨', version: 'nstrunv' }],
 };
 

@@ -56,15 +56,20 @@ describe('BibleService', () => {
       const result = await service.getVerses([range1, range2]);
 
       expect(result.verses).toEqual([v1, v2]);
-      expect(result.ranges).toEqual([range1, range2]);
+      expect(result.ranges).toEqual([
+        { abbrZh: '出', zh: '出埃及記', en: 'Exodus', abbrEn: 'Exod', chapterStart: 13, verseStart: 19 },
+        { abbrZh: '創', zh: '創世記', en: 'Genesis', abbrEn: 'Gen', chapterStart: 1, verseStart: 1 },
+      ]);
     });
 
-    it('returns ranges as-is in result', async () => {
+    it('returns enriched ranges in result', async () => {
       cache.findVerses.mockResolvedValueOnce([makeVerse('出', 13, 19)]);
 
       const result = await service.getVerses([RANGE]);
 
-      expect(result.ranges).toEqual([RANGE]);
+      expect(result.ranges).toEqual([
+        { abbrZh: '出', zh: '出埃及記', en: 'Exodus', abbrEn: 'Exod', chapterStart: 13, verseStart: 19 },
+      ]);
     });
   });
 });

@@ -24,3 +24,14 @@ export interface VerseResult {
   ranges: VerseRange[];
   verses: Verse[];
 }
+
+export interface VerseRangeResponse extends VerseRange {
+  zh: string;
+  en: string;
+  abbrEn: string;
+}
+
+export interface VerseResultResponse {
+  ranges: VerseRangeResponse[];
+  verses: Verse[];
+}

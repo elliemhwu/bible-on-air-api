@@ -1,5 +1,5 @@
 import { BIBLE_BOOKS } from '../bible-books.constant';
-import { BibleBook, VerseRange } from '../bible.types';
+import { BibleBook, VerseRange, VerseRangeResponse } from '../bible.types';
 
 /** 由中文縮寫或全名查找書卷。 */
 export function findBibleBook(abbrZh: string): BibleBook | undefined {
@@ -38,4 +38,9 @@ export function expandVerseRange(
     }
   }
   return refs;
+}
+
+export function enrichRange(range: VerseRange): VerseRangeResponse {
+  const book = findBibleBook(range.abbrZh)!;
+  return { ...range, zh: book.zh, en: book.en, abbrEn: book.abbrEn };
 }
