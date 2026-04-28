@@ -4,7 +4,7 @@
   "description": "Bible On Air - 靈修平台後端 API",
   "author": "",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "packageManager": "yarn@1.22.22",
   "scripts": {
     "build": "nest build",
