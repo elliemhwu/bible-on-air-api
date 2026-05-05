@@ -27,6 +27,7 @@ async function bootstrap() {
     .setTitle('Bible On Air API')
     .setDescription('BOA 靈修平台後端 API')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

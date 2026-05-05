@@ -1,8 +1,10 @@
 import 'reflect-metadata';
 import * as dotenv from 'dotenv';
+import * as bcrypt from 'bcryptjs';
 import { DataSource } from 'typeorm';
 import { Publisher } from '../../publishers/publisher.entity';
 import { Publication, PublicationType } from '../../publications/publication.entity';
+import { User, UserRole } from '../../users/user.entity';
 
 dotenv.config();
 
@@ -13,9 +15,19 @@ const dataSource = new DataSource({
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || 'password',
   database: process.env.DB_DATABASE || 'boa_db',
-  entities: [Publisher, Publication],
+  entities: [Publisher, Publication, User],
   synchronize: false,
 });
+
+const DEV_PASSWORD = 'test1234';
+
+const SEED_USERS: { email: string; name: string; roles: UserRole[] }[] = [
+  { email: 'super-admin@boa.test', name: 'Super Admin', roles: [UserRole.SUPER_ADMIN] },
+  { email: 'manager@boa.test',     name: 'Manager',     roles: [UserRole.MANAGER] },
+  { email: 'editor@boa.test',      name: 'Editor',      roles: [UserRole.EDITOR] },
+  { email: 'reviewer@boa.test',    name: 'Reviewer',    roles: [UserRole.REVIEWER] },
+  { email: 'image-editor@boa.test', name: 'Image Editor', roles: [UserRole.IMAGE_EDITOR] },
+];
 
 async function seed() {
   await dataSource.initialize();
@@ -23,6 +35,7 @@ async function seed() {
 
   const publisherRepo = dataSource.getRepository(Publisher);
   const publicationRepo = dataSource.getRepository(Publication);
+  const userRepo = dataSource.getRepository(User);
 
   await publisherRepo.upsert(
     { uid: 'nghcc', name: '北門聖教會' },
@@ -41,6 +54,16 @@ async function seed() {
     { conflictPaths: ['uid'], skipUpdateIfNoValuesChanged: true },
   );
   console.log('✓ Publication: bible-on-air');
+
+  const passwordHash = await bcrypt.hash(DEV_PASSWORD, 10);
+
+  for (const u of SEED_USERS) {
+    await userRepo.upsert(
+      { ...u, passwordHash },
+      { conflictPaths: ['email'], skipUpdateIfNoValuesChanged: false },
+    );
+    console.log(`✓ User: ${u.email}`);
+  }
 
   await dataSource.destroy();
   console.log('Done');
