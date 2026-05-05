@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MagazineArticlesService } from './magazine-articles.service';
 import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
 import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
@@ -33,6 +34,8 @@ export class MagazineArticlesController {
   // Post Methods
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new magazine article' })
   @ApiResponse({ status: 201, description: 'Article created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid request body' })
@@ -43,6 +46,8 @@ export class MagazineArticlesController {
   // Patch Methods
 
   @Patch(':date')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a magazine article' })
   @ApiParam({ name: 'date', description: 'Article date in YYYY-MM-DD format', example: '2026-04-20' })
   @ApiResponse({ status: 200, description: 'Article updated successfully' })
