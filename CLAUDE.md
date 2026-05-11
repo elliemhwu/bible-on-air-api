@@ -229,7 +229,7 @@ manager  → 按下發布（status: published）
 
 **2. 文章編輯**
 
-- [ ] `[2a]` 新增文章頁（選 article template、帶入 blocks、填日期）
+- [x] `[2a]` 新增文章頁（選 article template、帶入 blocks、填日期）
 - [ ] `[2b]` Verse block 編輯（輸入範圍 → 查詢顯示）
 - [ ] `[2c]` Questions block 編輯（逐題輸入）
 - [ ] `[2d]` Richtext block 編輯（選套件）
