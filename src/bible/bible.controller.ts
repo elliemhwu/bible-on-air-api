@@ -1,13 +1,21 @@
 import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { parseVerseRange } from './utils/verse-range-parser';
+import { BIBLE_BOOKS } from './bible-books.constant';
 import { BibleService } from './bible.service';
-import { VerseRange, VerseResultResponse } from './bible.types';
+import { BibleBook, VerseRange, VerseResultResponse } from './bible.types';
+import { parseVerseRange } from './utils/verse-range-parser';
 
 @ApiTags('Bible')
 @Controller('bible')
 export class BibleController {
   constructor(private readonly bibleService: BibleService) {}
+
+  @Get('books')
+  @ApiOperation({ summary: 'List all Bible books with chapter and verse counts' })
+  @ApiResponse({ status: 200, description: 'Returns all 66 books; chapters[i] = verse count of chapter i+1' })
+  getBooks(): BibleBook[] {
+    return BIBLE_BOOKS;
+  }
 
   @Get('verses')
   @ApiOperation({ summary: 'Get verses by reference string' })
