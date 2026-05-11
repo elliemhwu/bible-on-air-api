@@ -89,7 +89,7 @@ async function seed() {
           type: BlockType.VERSE,
           subheading: null,
           label: "經文範圍",
-          content: { displayMode: "ordered" },
+          defaultContent: { displayMode: "ordered" },
           required: true,
         },
         {
@@ -97,7 +97,7 @@ async function seed() {
           type: BlockType.QUESTIONS,
           subheading: "觀察與思想",
           label: "觀察與思想",
-          content: null,
+          defaultContent: null,
           required: true,
         },
         {
@@ -105,7 +105,7 @@ async function seed() {
           type: BlockType.RICHTEXT,
           subheading: "今日靈修",
           label: "今日靈修",
-          content: null,
+          defaultContent: null,
           required: true,
         },
         {
@@ -113,7 +113,7 @@ async function seed() {
           type: BlockType.VERSE,
           subheading: "背誦經文",
           label: "背誦金句",
-          content: { displayMode: "inline" },
+          defaultContent: { displayMode: "inline" },
           required: true,
         },
         {
@@ -121,7 +121,7 @@ async function seed() {
           type: BlockType.RICHTEXT,
           subheading: "回應與禱告",
           label: "回應與禱告",
-          content: null,
+          defaultContent: null,
           required: true,
         },
       ],
@@ -135,7 +135,7 @@ async function seed() {
           type: BlockType.RICHTEXT,
           subheading: null,
           label: "書卷介紹",
-          content: null,
+          defaultContent: null,
           required: true,
         },
         {
@@ -143,7 +143,7 @@ async function seed() {
           type: BlockType.RICHTEXT,
           subheading: "本書大綱",
           label: "書卷大綱",
-          content: null,
+          defaultContent: null,
           required: false,
         },
         {
@@ -151,7 +151,7 @@ async function seed() {
           type: BlockType.VERSE,
           subheading: "背誦經文",
           label: "背誦金句",
-          content: { displayMode: "inline" },
+          defaultContent: { displayMode: "inline" },
           required: true,
         },
         {
@@ -159,7 +159,7 @@ async function seed() {
           type: BlockType.RICHTEXT,
           subheading: "回應與禱告",
           label: "回應與禱告",
-          content: null,
+          defaultContent: null,
           required: true,
         },
       ],
