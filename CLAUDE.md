@@ -32,7 +32,7 @@ src/
 ├── auth/             # 登入、JWT 認證、守衛 (Guard)
 ├── users/            # 使用者管理（CRUD、角色）
 ├── articles/         # 每日靈修文章內容
-├── templates/        # 靈修內容模板與 block 定義
+├── article-templates/        # 靈修內容模板與 block 定義
 └── bible/            # 聖經經文查詢服務
 ```
 
@@ -93,7 +93,7 @@ Publication {
 }
 
 Article {
-  id, publicationId, date, templateId
+  id, publicationId, date, articleTemplateId
   status: enum [draft, reviewed, published]
   publishedAt, createdAt, updatedAt
 }
@@ -103,7 +103,7 @@ Block {
   type: enum [verse, questions, richtext]
 }
 
-Template {
+ArticleTemplate {
   id, name, publicationId
   blockDefinitions: BlockDefinition[]
 }
@@ -200,7 +200,7 @@ manager  → 按下發布（status: published）
 
 ### 已完成
 
-- [x] Publication / Article / Block / Template API（新增、修改、查詢）
+- [x] Publication / Article / Block / Article Template API（新增、修改、查詢）
 - [x] 每日靈修內容頁（public 瀏覽）
 - [x] Mini day picker / 歷史頁基本導航
 - [x] BibleService（FHL 信望愛 API + VerseRange parse）
@@ -215,7 +215,7 @@ manager  → 按下發布（status: published）
 
 **2. 文章編輯**
 
-- [ ] `[2a]` 新增文章頁（選 template、帶入 blocks、填日期）
+- [ ] `[2a]` 新增文章頁（選 article template、帶入 blocks、填日期）
 - [ ] `[2b]` Verse block 編輯（輸入範圍 → 查詢顯示）
 - [ ] `[2c]` Questions block 編輯（逐題輸入）
 - [ ] `[2d]` Richtext block 編輯（選套件）
@@ -261,7 +261,7 @@ manager  → 按下發布（status: published）
 
 - LINE 自動推播
 - Manager 進度規劃 + 排程分配
-- Template 管理後台
+- Article Template 管理後台
 - 各帳號個人化 dashboard
 - team_lead permission
 - History view 進階（書卷查找、關鍵字搜尋）

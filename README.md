@@ -12,7 +12,7 @@ It supports article templates, block-based devotional content, Bible verse looku
 - NestJS 10 + TypeORM backend
 - PostgreSQL data persistence
 - JWT authentication with admin/editor roles
-- Article, publication, magazine, template, and Bible scripture management
+- Article, publication, magazine, article template, and Bible scripture management
 - Bible verse range parsing, cache, and external provider integration
 - File uploads and seeded database support
 - Test support with Jest and end-to-end tests

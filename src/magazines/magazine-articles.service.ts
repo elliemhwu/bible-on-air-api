@@ -23,7 +23,7 @@ export class MagazineArticlesService {
       date: dto.date,
       title: dto.title,
       status: dto.status ?? ArticleStatus.DRAFT,
-      templateId: null,
+      articleTemplateId: null,
       coverImageUrl: null,
       publishedAt: null,
       blocks:
