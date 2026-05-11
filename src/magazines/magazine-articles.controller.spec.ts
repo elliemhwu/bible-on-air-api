@@ -1,19 +1,19 @@
-import { MagazineArticlesController } from './magazine-articles.controller';
-import { MagazineArticlesService } from './magazine-articles.service';
-import { Article, ArticleStatus } from '../articles/article.entity';
-import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
-import { UpdateMagazineArticleDto } from './dto/update-magazine-article.dto';
+import { Article, ArticleStatus } from "../articles/article.entity";
+import { CreateMagazineArticleDto } from "./dto/create-magazine-article.dto";
+import { UpdateMagazineArticleDto } from "./dto/update-magazine-article.dto";
+import { MagazineArticlesController } from "./magazine-articles.controller";
+import { MagazineArticlesService } from "./magazine-articles.service";
 
-const UID = 'bible-on-air';
+const UID = "bible-on-air";
 
 function makeArticle(): Article {
   return {
-    id: 'uuid-1',
+    id: "uuid-1",
     publicationUid: UID,
-    date: '2026-04-20',
-    title: '測試靈修',
+    date: "2026-04-20",
+    title: "測試靈修",
     status: ArticleStatus.DRAFT,
-    templateId: null,
+    articleTemplateId: null,
     coverImageUrl: null,
     publishedAt: null,
     blocks: [],
@@ -22,7 +22,7 @@ function makeArticle(): Article {
   } as Article;
 }
 
-describe('MagazineArticlesController', () => {
+describe("MagazineArticlesController", () => {
   let controller: MagazineArticlesController;
   let service: jest.Mocked<MagazineArticlesService>;
 
@@ -36,30 +36,35 @@ describe('MagazineArticlesController', () => {
     controller = new MagazineArticlesController(service);
   });
 
-  it('findAll → delegates to service with uid and query', async () => {
+  it("findAll → delegates to service with uid and query", async () => {
     const articles = [makeArticle()];
     service.findAll.mockResolvedValueOnce(articles);
 
     const result = controller.findAll(UID, { status: ArticleStatus.DRAFT });
 
     await expect(result).resolves.toBe(articles);
-    expect(service.findAll).toHaveBeenCalledWith(UID, { status: ArticleStatus.DRAFT });
+    expect(service.findAll).toHaveBeenCalledWith(UID, {
+      status: ArticleStatus.DRAFT,
+    });
   });
 
-  it('findByDate → delegates to service with uid and date', async () => {
+  it("findByDate → delegates to service with uid and date", async () => {
     const article = makeArticle();
     service.findByDate.mockResolvedValueOnce(article as any);
 
-    const result = controller.findByDate(UID, '2026-04-20');
+    const result = controller.findByDate(UID, "2026-04-20");
 
     await expect(result).resolves.toBe(article);
-    expect(service.findByDate).toHaveBeenCalledWith(UID, '2026-04-20');
+    expect(service.findByDate).toHaveBeenCalledWith(UID, "2026-04-20");
   });
 
-  it('create → delegates to service with uid and dto', async () => {
+  it("create → delegates to service with uid and dto", async () => {
     const article = makeArticle();
     service.create.mockResolvedValueOnce(article);
-    const dto: CreateMagazineArticleDto = { date: '2026-04-20', title: '測試靈修' };
+    const dto: CreateMagazineArticleDto = {
+      date: "2026-04-20",
+      title: "測試靈修",
+    };
 
     const result = controller.create(UID, dto);
 
@@ -67,14 +72,14 @@ describe('MagazineArticlesController', () => {
     expect(service.create).toHaveBeenCalledWith(UID, dto);
   });
 
-  it('update → delegates to service with uid, date and dto', async () => {
+  it("update → delegates to service with uid, date and dto", async () => {
     const article = makeArticle();
     service.update.mockResolvedValueOnce(article);
-    const dto: UpdateMagazineArticleDto = { title: '新標題' };
+    const dto: UpdateMagazineArticleDto = { title: "新標題" };
 
-    const result = controller.update(UID, '2026-04-20', dto);
+    const result = controller.update(UID, "2026-04-20", dto);
 
     await expect(result).resolves.toBe(article);
-    expect(service.update).toHaveBeenCalledWith(UID, '2026-04-20', dto);
+    expect(service.update).toHaveBeenCalledWith(UID, "2026-04-20", dto);
   });
 });

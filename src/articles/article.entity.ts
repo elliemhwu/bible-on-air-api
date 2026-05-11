@@ -7,39 +7,39 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-} from 'typeorm';
-import { Publication } from '../publications/publication.entity';
-import { Block } from '../blocks/block.entity';
+} from "typeorm";
+import { Block } from "../blocks/block.entity";
+import { Publication } from "../publications/publication.entity";
 
 export enum ArticleStatus {
-  DRAFT = 'draft',
-  REVIEWED = 'reviewed',
-  PUBLISHED = 'published',
+  DRAFT = "draft",
+  REVIEWED = "reviewed",
+  PUBLISHED = "published",
 }
 
 class ArticleColumns {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: "varchar", length: 100 })
   publicationUid: string;
 
-  @Column({ type: 'date' })
+  @Column({ type: "date" })
   date: string;
 
-  @Column({ type: 'varchar', length: 200, nullable: true })
+  @Column({ type: "varchar", length: 200, nullable: true })
   title: string | null;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ type: "varchar", length: 50 })
   status: ArticleStatus;
 
-  @Column({ type: 'int', nullable: true })
-  templateId: number | null;
+  @Column({ type: "int", nullable: true })
+  articleTemplateId: number | null;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
+  @Column({ type: "varchar", length: 500, nullable: true })
   coverImageUrl: string | null;
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ type: "timestamptz", nullable: true })
   publishedAt: Date | null;
 
   @CreateDateColumn()
@@ -49,10 +49,10 @@ class ArticleColumns {
   updatedAt: Date;
 }
 
-@Entity('articles')
+@Entity("articles")
 export class Article extends ArticleColumns {
   @ManyToOne(() => Publication)
-  @JoinColumn({ name: 'publicationUid', referencedColumnName: 'uid' })
+  @JoinColumn({ name: "publicationUid", referencedColumnName: "uid" })
   publication: Publication;
 
   @OneToMany(() => Block, (block) => block.article, { cascade: true })

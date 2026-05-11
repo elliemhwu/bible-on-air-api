@@ -39,6 +39,10 @@ export class CreateMagazineArticleDto {
   title: string;
 
   @IsOptional()
+  @IsNumber()
+  articleTemplateId?: number;
+
+  @IsOptional()
   @IsEnum(ArticleStatus)
   status?: ArticleStatus;
 

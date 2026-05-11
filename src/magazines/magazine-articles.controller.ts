@@ -1,18 +1,21 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { MagazineArticlesService } from './magazine-articles.service';
+import { RolesGuard } from '../auth/roles.guard';
+import { UserRole } from '../users/user.entity';
 import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
 import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
 import { UpdateMagazineArticleDto } from './dto/update-magazine-article.dto';
+import { MagazineArticlesService } from './magazine-articles.service';
+
+const EDITOR_ROLES = [UserRole.EDITOR, UserRole.REVIEWER, UserRole.MANAGER, UserRole.SUPER_ADMIN];
 
 @ApiTags('Magazine Articles')
 @ApiParam({ name: 'uid', description: 'Magazine publication UID (e.g. bible-on-air)', example: 'bible-on-air' })
 @Controller('magazines/:uid/articles')
 export class MagazineArticlesController {
   constructor(private readonly magazineArticlesService: MagazineArticlesService) {}
-
-  // Get Methods
 
   @Get()
   @ApiOperation({ summary: 'List all articles for a magazine' })
@@ -31,22 +34,34 @@ export class MagazineArticlesController {
     return this.magazineArticlesService.findByDate(uid, date);
   }
 
-  // Post Methods
-
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...EDITOR_ROLES)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new magazine article' })
   @ApiResponse({ status: 201, description: 'Article created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid request body' })
+  @ApiResponse({ status: 403, description: 'Insufficient role' })
   create(@Param('uid') uid: string, @Body() dto: CreateMagazineArticleDto) {
     return this.magazineArticlesService.create(uid, dto);
   }
 
-  // Patch Methods
+  @Post(':id/blocks')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...EDITOR_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create default blocks for an article from its article template' })
+  @ApiParam({ name: 'id', description: 'Article UUID' })
+  @ApiResponse({ status: 201, description: 'Blocks created, returns article with blocks' })
+  @ApiResponse({ status: 404, description: 'Article or template not found' })
+  @ApiResponse({ status: 409, description: 'Article already has blocks' })
+  createBlocks(@Param('uid') uid: string, @Param('id') id: string) {
+    return this.magazineArticlesService.createBlocksFromTemplate(uid, id);
+  }
 
   @Patch(':date')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...EDITOR_ROLES)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a magazine article' })
   @ApiParam({ name: 'date', description: 'Article date in YYYY-MM-DD format', example: '2026-04-20' })
