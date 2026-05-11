@@ -7,7 +7,7 @@ export interface BlockDefinition {
   type: BlockType;
   subheading: string | null;
   label: string;
-  content: BlockContent | null;
+  defaultContent: BlockContent | null;
   /** false = optional block, can be removed by editor */
   required: boolean;
 }
