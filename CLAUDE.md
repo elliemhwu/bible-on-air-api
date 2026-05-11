@@ -209,53 +209,53 @@ manager  → 按下發布（status: published）
 
 **1. 登入系統**
 
-- `[1a]` User entity + role enum + seed data
-- `[1b]` 登入 API（JWT、Guard）
-- `[1c]` 前端登入頁 + token 儲存 + route protection
+- [x] `[1a]` User entity + role enum + seed data
+- [x] `[1b]` 登入 API（JWT、Guard）
+- [x] `[1c]` 前端登入頁 + token 儲存 + route protection
 
 **2. 文章編輯**
 
-- `[2a]` 新增文章頁（選 template、帶入 blocks、填日期）
-- `[2b]` Verse block 編輯（輸入範圍 → 查詢顯示）
-- `[2c]` Questions block 編輯（逐題輸入）
-- `[2d]` Richtext block 編輯（選套件）
+- [ ] `[2a]` 新增文章頁（選 template、帶入 blocks、填日期）
+- [ ] `[2b]` Verse block 編輯（輸入範圍 → 查詢顯示）
+- [ ] `[2c]` Questions block 編輯（逐題輸入）
+- [ ] `[2d]` Richtext block 編輯（選套件）
 
 **3. 圖片上傳**
 
-- `[3a]` 後端：圖片上傳 API（對應日期）
-- `[3b]` 前端：批次上傳介面
+- [ ] `[3a]` 後端：圖片上傳 API（對應日期）
+- [ ] `[3b]` 前端：批次上傳介面
 
 **4. Editor & Image Editor Dashboard**
 
-- `[4a]` Editor dashboard（所有 draft / reviewed 文章列表）
-- `[4b]` Image editor dashboard（待上傳圖片日期列表）
+- [ ] `[4a]` Editor dashboard（所有 draft / reviewed 文章列表）
+- [ ] `[4b]` Image editor dashboard（待上傳圖片日期列表）
 
 **5. History View**
 
-- `[5a]` 後端：取得某月所有文章 API
-- `[5b]` 前端：Monthly list view
+- [ ] `[5a]` 後端：取得某月所有文章 API
+- [ ] `[5b]` 前端：Monthly list view
 
 **6. Review mode + Reviewer Dashboard**
 
-- `[6a]` Reviewer dashboard（待 review 文章列表）
-- `[6b]` Review mode UI（閱讀視圖 + hover edit）
-- `[6c]` 狀態流轉 API（draft → reviewed）
+- [ ] `[6a]` Reviewer dashboard（待 review 文章列表）
+- [ ] `[6b]` Review mode UI（閱讀視圖 + hover edit）
+- [ ] `[6c]` 狀態流轉 API（draft → reviewed）
 
 **7. Manager 發布 + Dashboard**
 
-- `[7a]` 發布 API（reviewed → published）
-- `[7b]` Manager dashboard + 發布按鈕
+- [ ] `[7a]` 發布 API（reviewed → published）
+- [ ] `[7b]` Manager dashboard + 發布按鈕
 
 **8. PDF 匯出**
 
-- `[8a]` 後端產生 PDF（單日或週）
-- `[8b]` 前端下載入口
+- [ ] `[8a]` 後端產生 PDF（單日或週）
+- [ ] `[8b]` 前端下載入口
 
 **9. Migration 爬蟲**
 
-- `[9a]` 分析舊 Google Site HTML 結構
-- `[9b]` 爬蟲實作 + 資料驗證
-- `[9c]` 跑最近 2-3 個月 + 建立 SOP
+- [ ] `[9a]` 分析舊 Google Site HTML 結構
+- [ ] `[9b]` 爬蟲實作 + 資料驗證
+- [ ] `[9c]` 跑最近 2-3 個月 + 建立 SOP
 
 ### 暫緩到 Stage 2+
 
