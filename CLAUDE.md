@@ -117,7 +117,9 @@ ArticleTemplate {
 | `questions` | 逐題輸入（陣列）       | 逐題顯示，未來旁邊有筆記入口 |                  |
 | `richtext`  | Rich text editor       | 排版後顯示                   | 禁止手動空格縮排 |
 
-### BOA Standard Template（約 97% 的文章格式）
+### Bible On Air 每日靈修 Template
+
+約 97% 的文章格式，用於每天的查經靈修內容。
 
 ```
 blocks: [
@@ -129,7 +131,19 @@ blocks: [
 ]
 ```
 
-另有 BOA Free Template 處理約 3% 的自由格式內容。
+### Bible On Air 書卷鳥瞰 Template
+
+約 3%，當要開始一本新的書卷時使用；
+有時會缺少第二節「本書綱要」的部分，因此應該也要可以自行決定刪掉（這部分還沒有規劃）
+
+```
+blocks: [
+  { order: 1, type: richtext,  subheading: null,        label: "書卷介紹" },
+  { order: 2, type: richtext,  subheading: "本書大綱",   label: "書卷大綱" },
+  { order: 3, type: verse,     subheading: "背誦經文",   label: "背誦金句" },
+  { order: 4, type: richtext,  subheading: "回應與禱告", label: "回應與禱告" },
+]
+```
 
 ---
 

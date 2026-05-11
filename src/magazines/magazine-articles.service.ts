@@ -1,19 +1,22 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { Article, ArticleStatus } from "../articles/article.entity";
-import { BibleService } from "../bible/bible.service";
-import { VerseBlockContent } from "../blocks/block-content.types";
-import { BlockType } from "../blocks/block.entity";
-import { CreateMagazineArticleDto } from "./dto/create-magazine-article.dto";
-import { MagazineArticleQueryDto } from "./dto/magazine-article-query.dto";
-import { UpdateMagazineArticleDto } from "./dto/update-magazine-article.dto";
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ArticleTemplate } from '../article-templates/article-template.entity';
+import { Article, ArticleStatus } from '../articles/article.entity';
+import { BibleService } from '../bible/bible.service';
+import { VerseBlockContent } from '../blocks/block-content.types';
+import { BlockType } from '../blocks/block.entity';
+import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
+import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
+import { UpdateMagazineArticleDto } from './dto/update-magazine-article.dto';
 
 @Injectable()
 export class MagazineArticlesService {
   constructor(
     @InjectRepository(Article)
     private readonly articleRepo: Repository<Article>,
+    @InjectRepository(ArticleTemplate)
+    private readonly templateRepo: Repository<ArticleTemplate>,
     private readonly bibleService: BibleService,
   ) {}
 
@@ -23,7 +26,7 @@ export class MagazineArticlesService {
       date: dto.date,
       title: dto.title,
       status: dto.status ?? ArticleStatus.DRAFT,
-      articleTemplateId: null,
+      articleTemplateId: dto.articleTemplateId ?? null,
       coverImageUrl: null,
       publishedAt: null,
       blocks:
@@ -38,29 +41,26 @@ export class MagazineArticlesService {
     return this.articleRepo.save(article);
   }
 
-  async findAll(
-    uid: string,
-    query: MagazineArticleQueryDto,
-  ): Promise<Article[]> {
+  async findAll(uid: string, query: MagazineArticleQueryDto): Promise<Article[]> {
     const qb = this.articleRepo
-      .createQueryBuilder("article")
-      .where("article.publicationUid = :uid", { uid })
-      .orderBy("article.date", "DESC");
+      .createQueryBuilder('article')
+      .where('article.publicationUid = :uid', { uid })
+      .orderBy('article.date', 'DESC');
 
     if (query.status) {
-      qb.andWhere("article.status = :status", { status: query.status });
+      qb.andWhere('article.status = :status', { status: query.status });
     }
 
     return qb.getMany();
   }
 
-  async findByDate(uid: string, date: string) {
+  async findByDate(uid: string, date: string): Promise<Article> {
     const article = await this.articleRepo
-      .createQueryBuilder("article")
-      .where("article.publicationUid = :uid", { uid })
-      .andWhere("article.date = :date", { date })
-      .leftJoinAndSelect("article.blocks", "blocks")
-      .orderBy("blocks.order", "ASC")
+      .createQueryBuilder('article')
+      .where('article.publicationUid = :uid', { uid })
+      .andWhere('article.date = :date', { date })
+      .leftJoinAndSelect('article.blocks', 'blocks')
+      .orderBy('blocks.order', 'ASC')
       .getOne();
 
     if (!article) {
@@ -70,7 +70,6 @@ export class MagazineArticlesService {
     await Promise.all(
       article.blocks.map(async (block) => {
         if (block.type !== BlockType.VERSE || !block.content) return;
-
         const { ranges } = block.content as VerseBlockContent;
         Object.assign(block.content, await this.bibleService.getVerses(ranges));
       }),
@@ -79,16 +78,63 @@ export class MagazineArticlesService {
     return article;
   }
 
-  async update(
-    uid: string,
-    date: string,
-    dto: UpdateMagazineArticleDto,
-  ): Promise<Article> {
+  async findById(uid: string, id: string): Promise<Article> {
+    const article = await this.articleRepo
+      .createQueryBuilder('article')
+      .where('article.publicationUid = :uid', { uid })
+      .andWhere('article.id = :id', { id })
+      .leftJoinAndSelect('article.blocks', 'blocks')
+      .orderBy('blocks.order', 'ASC')
+      .getOne();
+
+    if (!article) {
+      throw new NotFoundException(`Article ${id} not found`);
+    }
+
+    return article;
+  }
+
+  async createBlocksFromTemplate(uid: string, id: string): Promise<Article> {
+    const article = await this.findById(uid, id);
+
+    if (article.blocks.length > 0) {
+      throw new ConflictException(`Article ${id} already has blocks`);
+    }
+
+    if (!article.articleTemplateId) {
+      throw new NotFoundException(`Article ${id} has no articleTemplateId`);
+    }
+
+    const template = await this.templateRepo.findOneBy({ id: article.articleTemplateId });
+    if (!template) {
+      throw new NotFoundException(`ArticleTemplate #${article.articleTemplateId} not found`);
+    }
+
+    article.blocks = template.blockDefinitions.map((def) => {
+      let content: object;
+      if (def.type === BlockType.VERSE) {
+        content = { ranges: [] };
+      } else if (def.type === BlockType.QUESTIONS) {
+        content = { items: [] };
+      } else {
+        content = { html: '' };
+      }
+      return this.articleRepo.manager.create('Block', {
+        order: def.order,
+        type: def.type,
+        subheading: def.subheading,
+        content,
+      }) as any;
+    });
+
+    return this.articleRepo.save(article);
+  }
+
+  async update(uid: string, date: string, dto: UpdateMagazineArticleDto): Promise<Article> {
     const article = await this.findByDate(uid, date);
 
     if (dto.title !== undefined) article.title = dto.title;
-    if (dto.coverImageUrl !== undefined)
-      article.coverImageUrl = dto.coverImageUrl;
+    if (dto.coverImageUrl !== undefined) article.coverImageUrl = dto.coverImageUrl;
     if (dto.status !== undefined) article.status = dto.status;
     if (dto.date !== undefined) article.date = dto.date;
 
