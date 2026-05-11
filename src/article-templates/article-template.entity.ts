@@ -8,6 +8,8 @@ export interface BlockDefinition {
   subheading: string | null;
   label: string;
   content: BlockContent | null;
+  /** false = optional block, can be removed by editor */
+  required: boolean;
 }
 
 @Entity("article_templates")
