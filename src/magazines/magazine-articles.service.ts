@@ -7,6 +7,7 @@ import { BibleService } from '../bible/bible.service';
 import { VerseBlockContent } from '../blocks/block-content.types';
 import { Block, BlockType } from '../blocks/block.entity';
 import { CoverImageItemDto } from './dto/batch-cover-image.dto';
+import { BatchCreateArticleDto } from './dto/batch-create-article.dto';
 import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
 import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
 import { UpdateBlockContentDto } from './dto/update-block-content.dto';
@@ -43,6 +44,28 @@ export class MagazineArticlesService {
     });
 
     return this.articleRepo.save(article);
+  }
+
+  async batchCreate(uid: string, dto: BatchCreateArticleDto): Promise<Article[]> {
+    const articles = dto.items.map((item) =>
+      this.articleRepo.create({
+        publicationUid: uid,
+        date: item.date,
+        title: item.title,
+        status: item.status ?? ArticleStatus.DRAFT,
+        articleTemplateId: item.articleTemplateId ?? null,
+        coverImageUrl: null,
+        publishedAt: null,
+        blocks:
+          item.blocks?.map((b) => ({
+            order: b.order,
+            type: b.type,
+            subheading: b.subheading ?? null,
+            content: b.content ?? null,
+          })) ?? [],
+      }),
+    );
+    return this.articleRepo.save(articles);
   }
 
   async findAll(uid: string, query: MagazineArticleQueryDto): Promise<Article[]> {

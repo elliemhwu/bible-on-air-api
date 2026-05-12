@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { BatchCoverImageDto } from './dto/batch-cover-image.dto';
+import { BatchCreateArticleDto } from './dto/batch-create-article.dto';
 import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
 import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
 import { UpdateBlockContentDto } from './dto/update-block-content.dto';
@@ -47,6 +48,18 @@ export class MagazineArticlesController {
   @ApiResponse({ status: 403, description: 'Insufficient role' })
   create(@Param('uid') uid: string, @Body() dto: CreateMagazineArticleDto) {
     return this.magazineArticlesService.create(uid, dto);
+  }
+
+  @Post('batch')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...EDITOR_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Batch create magazine articles (for migration)' })
+  @ApiResponse({ status: 201, description: 'Articles created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid request body' })
+  @ApiResponse({ status: 403, description: 'Insufficient role' })
+  batchCreate(@Param('uid') uid: string, @Body() dto: BatchCreateArticleDto) {
+    return this.magazineArticlesService.batchCreate(uid, dto);
   }
 
   @Post(':id/blocks')

@@ -151,6 +151,43 @@ describe("MagazineArticlesService", () => {
     });
   });
 
+  // ── batchCreate ─────────────────────────────────────────
+  describe("batchCreate", () => {
+    it("creates and saves all articles", async () => {
+      const a1 = makeArticle({ date: "2026-04-21" });
+      const a2 = makeArticle({ id: "uuid-2", date: "2026-04-22" });
+      articleRepo.create
+        .mockReturnValueOnce(a1)
+        .mockReturnValueOnce(a2);
+      articleRepo.save.mockResolvedValueOnce([a1, a2]);
+
+      const result = await service.batchCreate(UID, {
+        items: [
+          { date: "2026-04-21", title: "第一篇" },
+          { date: "2026-04-22", title: "第二篇" },
+        ],
+      });
+
+      expect(articleRepo.create).toHaveBeenCalledTimes(2);
+      expect(articleRepo.save).toHaveBeenCalledWith([a1, a2]);
+      expect(result).toEqual([a1, a2]);
+    });
+
+    it("defaults status to DRAFT", async () => {
+      const article = makeArticle();
+      articleRepo.create.mockReturnValueOnce(article);
+      articleRepo.save.mockResolvedValueOnce([article]);
+
+      await service.batchCreate(UID, {
+        items: [{ date: "2026-04-21", title: "測試" }],
+      });
+
+      expect(articleRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ArticleStatus.DRAFT }),
+      );
+    });
+  });
+
   // ── findAll ──────────────────────────────────────────────
   describe("findAll", () => {
     it("returns articles ordered by date", async () => {
