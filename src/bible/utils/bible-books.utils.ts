@@ -1,5 +1,5 @@
-import { BIBLE_BOOKS } from '../bible-books.constant';
-import { BibleBook, VerseRange, VerseRangeResponse } from '../bible.types';
+import { BIBLE_BOOKS } from "../bible-books.constant";
+import { BibleBook, VerseRange, VerseRangeResponse } from "../bible.types";
 
 /** 由中文縮寫或全名查找書卷。 */
 export function findBibleBook(abbrZh: string): BibleBook | undefined {

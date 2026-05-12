@@ -6,7 +6,7 @@ export interface VerseRange {
   verseEnd?: number;
 }
 
-export type VerseDisplayMode = 'ordered' | 'inline' | 'inline-numbered';
+export type VerseDisplayMode = "ordered" | "inline" | "inline-numbered";
 
 export interface VerseBlockContent {
   ranges: VerseRange[];

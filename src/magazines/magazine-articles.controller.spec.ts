@@ -1,6 +1,7 @@
 import { Article, ArticleStatus } from "../articles/article.entity";
 import { Block, BlockType } from "../blocks/block.entity";
 import { BatchCoverImageDto } from "./dto/batch-cover-image.dto";
+import { BatchCreateArticleDto } from "./dto/batch-create-article.dto";
 import { CreateMagazineArticleDto } from "./dto/create-magazine-article.dto";
 import { UpdateBlockContentDto } from "./dto/update-block-content.dto";
 import { UpdateMagazineArticleDto } from "./dto/update-magazine-article.dto";
@@ -47,6 +48,7 @@ describe("MagazineArticlesController", () => {
       findAll: jest.fn(),
       findByDate: jest.fn(),
       create: jest.fn(),
+      batchCreate: jest.fn(),
       createBlocksFromTemplate: jest.fn(),
       batchUpdateCoverImages: jest.fn(),
       update: jest.fn(),
@@ -89,6 +91,19 @@ describe("MagazineArticlesController", () => {
 
     await expect(result).resolves.toBe(article);
     expect(service.create).toHaveBeenCalledWith(UID, dto);
+  });
+
+  it("batchCreate → delegates to service with uid and dto", async () => {
+    const articles = [makeArticle()];
+    service.batchCreate.mockResolvedValueOnce(articles);
+    const dto: BatchCreateArticleDto = {
+      items: [{ date: "2026-04-21", title: "第一篇" }],
+    };
+
+    const result = controller.batchCreate(UID, dto);
+
+    await expect(result).resolves.toBe(articles);
+    expect(service.batchCreate).toHaveBeenCalledWith(UID, dto);
   });
 
   it("createBlocks → delegates to service with uid and article id", async () => {
