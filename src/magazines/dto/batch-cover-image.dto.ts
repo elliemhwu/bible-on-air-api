@@ -1,12 +1,16 @@
-import { Type } from 'class-transformer';
-import { IsArray, IsDateString, IsString, IsUrl, ValidateNested } from 'class-validator';
+import { Type } from "class-transformer";
+import {
+  IsArray,
+  IsDateString,
+  IsString,
+  ValidateNested,
+} from "class-validator";
 
 export class CoverImageItemDto {
   @IsDateString()
   date: string;
 
   @IsString()
-  @IsUrl({ require_tld: false })
   imageUrl: string;
 }
 
