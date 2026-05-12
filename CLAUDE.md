@@ -234,6 +234,7 @@ manager  → 按下發布（status: published）
 - [x] `[2c]` Questions block 編輯（逐題輸入）
 - [x] `[2d]` Richtext block 編輯（選套件）
 - [x] `[2e]` 編輯已存在的文章
+- [ ] `[2f]` 補完編輯功能（例如鳥瞰 template 才比較會用到的 richtext 清單、subheading、鳥瞰 template 顯示）
 
 **3. 圖片上傳**
 
@@ -242,9 +243,9 @@ manager  → 按下發布（status: published）
 
 **4. Migration 爬蟲**
 
-- [ ] `[4a]` 分析舊 Google Site HTML 結構
-- [ ] `[4b]` 爬蟲實作 + 資料驗證
-- [ ] `[4c]` 跑最近 2-3 個月 + 建立 SOP
+- [x] `[4a]` 分析舊 Google Site HTML 結構
+- [x] `[4b]` 爬蟲實作 + 資料驗證
+- [x] `[4c]` 跑最近 2-3 個月 + 建立 SOP
 
 **5. Editor & Image Editor Dashboard**
 
