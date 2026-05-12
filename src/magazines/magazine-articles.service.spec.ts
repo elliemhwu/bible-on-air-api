@@ -359,15 +359,24 @@ describe("MagazineArticlesService", () => {
       expect(articleRepo.manager.create).toHaveBeenCalledTimes(3);
       expect(articleRepo.manager.create).toHaveBeenCalledWith(
         "Block",
-        expect.objectContaining({ type: BlockType.VERSE, content: { ranges: [] } }),
+        expect.objectContaining({
+          type: BlockType.VERSE,
+          content: { ranges: [] },
+        }),
       );
       expect(articleRepo.manager.create).toHaveBeenCalledWith(
         "Block",
-        expect.objectContaining({ type: BlockType.QUESTIONS, content: { items: [] } }),
+        expect.objectContaining({
+          type: BlockType.QUESTIONS,
+          content: { items: [] },
+        }),
       );
       expect(articleRepo.manager.create).toHaveBeenCalledWith(
         "Block",
-        expect.objectContaining({ type: BlockType.RICHTEXT, content: { html: "" } }),
+        expect.objectContaining({
+          type: BlockType.RICHTEXT,
+          content: { html: "" },
+        }),
       );
       expect(result).toBe(savedArticle);
     });
@@ -446,7 +455,9 @@ describe("MagazineArticlesService", () => {
     });
 
     it("throws NotFoundException if blockId not in article", async () => {
-      const article = makeArticle({ blocks: [makeBlock({ id: "block-uuid-1" })] as any });
+      const article = makeArticle({
+        blocks: [makeBlock({ id: "block-uuid-1" })] as any,
+      });
       const qb = makeQb(article);
       articleRepo.createQueryBuilder.mockReturnValue(qb);
 
