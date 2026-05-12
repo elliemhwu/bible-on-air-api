@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
 import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
+import { UpdateBlockContentDto } from './dto/update-block-content.dto';
 import { UpdateMagazineArticleDto } from './dto/update-magazine-article.dto';
 import { MagazineArticlesService } from './magazine-articles.service';
 
@@ -73,5 +74,23 @@ export class MagazineArticlesController {
     @Body() dto: UpdateMagazineArticleDto,
   ) {
     return this.magazineArticlesService.update(uid, date, dto);
+  }
+
+  @Patch(':date/blocks/:blockId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...EDITOR_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a block\'s content' })
+  @ApiParam({ name: 'date', description: 'Article date in YYYY-MM-DD format', example: '2026-04-20' })
+  @ApiParam({ name: 'blockId', description: 'Block UUID' })
+  @ApiResponse({ status: 200, description: 'Block updated successfully' })
+  @ApiResponse({ status: 404, description: 'Article or block not found' })
+  updateBlockContent(
+    @Param('uid') uid: string,
+    @Param('date') date: string,
+    @Param('blockId') blockId: string,
+    @Body() dto: UpdateBlockContentDto,
+  ) {
+    return this.magazineArticlesService.updateBlockContent(uid, date, blockId, dto);
   }
 }
