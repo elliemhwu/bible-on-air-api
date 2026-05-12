@@ -233,6 +233,7 @@ manager  → 按下發布（status: published）
 - [x] `[2b]` Verse block 編輯（輸入範圍 → 查詢顯示）
 - [x] `[2c]` Questions block 編輯（逐題輸入）
 - [x] `[2d]` Richtext block 編輯（選套件）
+- [ ] `[2e]` 編輯已存在的文章
 
 **3. 圖片上傳**
 

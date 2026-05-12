@@ -5,9 +5,10 @@ import { ArticleTemplate } from '../article-templates/article-template.entity';
 import { Article, ArticleStatus } from '../articles/article.entity';
 import { BibleService } from '../bible/bible.service';
 import { VerseBlockContent } from '../blocks/block-content.types';
-import { BlockType } from '../blocks/block.entity';
+import { Block, BlockType } from '../blocks/block.entity';
 import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
 import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
+import { UpdateBlockContentDto } from './dto/update-block-content.dto';
 import { UpdateMagazineArticleDto } from './dto/update-magazine-article.dto';
 
 @Injectable()
@@ -17,6 +18,8 @@ export class MagazineArticlesService {
     private readonly articleRepo: Repository<Article>,
     @InjectRepository(ArticleTemplate)
     private readonly templateRepo: Repository<ArticleTemplate>,
+    @InjectRepository(Block)
+    private readonly blockRepo: Repository<Block>,
     private readonly bibleService: BibleService,
   ) {}
 
@@ -128,6 +131,16 @@ export class MagazineArticlesService {
     });
 
     return this.articleRepo.save(article);
+  }
+
+  async updateBlockContent(uid: string, date: string, blockId: string, dto: UpdateBlockContentDto): Promise<Block> {
+    const article = await this.findByDate(uid, date);
+    const block = article.blocks.find((b) => b.id === blockId);
+    if (!block) {
+      throw new NotFoundException(`Block ${blockId} not found on article ${date}`);
+    }
+    block.content = dto.content as any;
+    return this.blockRepo.save(block);
   }
 
   async update(uid: string, date: string, dto: UpdateMagazineArticleDto): Promise<Article> {
