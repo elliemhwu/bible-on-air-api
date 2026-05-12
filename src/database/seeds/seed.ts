@@ -83,6 +83,7 @@ async function seed() {
     {
       name: "Bible On Air 每日靈修",
       publicationUid: "bible-on-air",
+      isDefault: true,
       blockDefinitions: [
         {
           order: 1,
@@ -129,6 +130,7 @@ async function seed() {
     {
       name: "Bible On Air 書卷鳥瞰",
       publicationUid: "bible-on-air",
+      isDefault: false,
       blockDefinitions: [
         {
           order: 1,
