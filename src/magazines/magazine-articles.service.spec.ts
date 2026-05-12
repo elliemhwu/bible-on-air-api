@@ -1,8 +1,8 @@
-import { NotFoundException } from "@nestjs/common";
+import { ConflictException, NotFoundException } from "@nestjs/common";
 import { Article, ArticleStatus } from "../articles/article.entity";
 import { BibleService } from "../bible/bible.service";
 import { VerseBlockContent } from "../blocks/block-content.types";
-import { BlockType } from "../blocks/block.entity";
+import { Block, BlockType } from "../blocks/block.entity";
 import { MagazineArticlesService } from "./magazine-articles.service";
 
 const UID = "bible-on-air";
@@ -24,11 +24,27 @@ function makeArticle(overrides: Partial<Article> = {}): Article {
   } as Article;
 }
 
+function makeBlock(overrides: Partial<Block> = {}): Block {
+  return {
+    id: "block-uuid-1",
+    articleId: "uuid-1",
+    order: 1,
+    type: BlockType.RICHTEXT,
+    subheading: null,
+    content: { html: "<p>text</p>" },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  } as Block;
+}
+
 function makeRepo() {
   return {
     create: jest.fn(),
     save: jest.fn(),
+    findOneBy: jest.fn(),
     createQueryBuilder: jest.fn(),
+    manager: { create: jest.fn() },
   };
 }
 
@@ -47,8 +63,8 @@ function makeQb(result: Article | null | Article[]) {
 describe("MagazineArticlesService", () => {
   let service: MagazineArticlesService;
   let articleRepo: ReturnType<typeof makeRepo>;
-  let templateRepo: ReturnType<typeof makeRepo> = makeRepo();
-  let blockRepo: ReturnType<typeof makeRepo> = makeRepo();
+  let templateRepo: ReturnType<typeof makeRepo>;
+  let blockRepo: ReturnType<typeof makeRepo>;
   let bibleService: jest.Mocked<BibleService>;
 
   beforeEach(() => {
@@ -269,6 +285,103 @@ describe("MagazineArticlesService", () => {
     });
   });
 
+  // ── createBlocksFromTemplate ─────────────────────────────
+  describe("createBlocksFromTemplate", () => {
+    it("throws ConflictException if article already has blocks", async () => {
+      const article = makeArticle({
+        blocks: [makeBlock()] as any,
+      });
+      const qb = makeQb(article);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await expect(
+        service.createBlocksFromTemplate(UID, "uuid-1"),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("throws NotFoundException if article has no templateId", async () => {
+      const article = makeArticle({ blocks: [], articleTemplateId: null });
+      const qb = makeQb(article);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await expect(
+        service.createBlocksFromTemplate(UID, "uuid-1"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("throws NotFoundException if template does not exist", async () => {
+      const article = makeArticle({
+        blocks: [],
+        articleTemplateId: 1,
+      });
+      const qb = makeQb(article);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+      templateRepo.findOneBy.mockResolvedValueOnce(null);
+
+      await expect(
+        service.createBlocksFromTemplate(UID, "uuid-1"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("creates blocks from template definitions and saves", async () => {
+      const article = makeArticle({
+        blocks: [],
+        articleTemplateId: 42,
+      });
+      const qb = makeQb(article);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      const template = {
+        id: "tmpl-uuid",
+        blockDefinitions: [
+          { order: 1, type: BlockType.VERSE, subheading: null },
+          { order: 2, type: BlockType.QUESTIONS, subheading: "觀察與思想" },
+          { order: 3, type: BlockType.RICHTEXT, subheading: "今日靈修" },
+        ],
+      };
+      templateRepo.findOneBy.mockResolvedValueOnce(template);
+
+      const mockBlocks = template.blockDefinitions.map((def) => ({
+        order: def.order,
+        type: def.type,
+        subheading: def.subheading,
+      }));
+      articleRepo.manager.create
+        .mockReturnValueOnce(mockBlocks[0])
+        .mockReturnValueOnce(mockBlocks[1])
+        .mockReturnValueOnce(mockBlocks[2]);
+
+      const savedArticle = { ...article, blocks: mockBlocks };
+      articleRepo.save.mockResolvedValueOnce(savedArticle);
+
+      const result = await service.createBlocksFromTemplate(UID, "uuid-1");
+
+      expect(articleRepo.manager.create).toHaveBeenCalledTimes(3);
+      expect(articleRepo.manager.create).toHaveBeenCalledWith(
+        "Block",
+        expect.objectContaining({
+          type: BlockType.VERSE,
+          content: { ranges: [] },
+        }),
+      );
+      expect(articleRepo.manager.create).toHaveBeenCalledWith(
+        "Block",
+        expect.objectContaining({
+          type: BlockType.QUESTIONS,
+          content: { items: [] },
+        }),
+      );
+      expect(articleRepo.manager.create).toHaveBeenCalledWith(
+        "Block",
+        expect.objectContaining({
+          type: BlockType.RICHTEXT,
+          content: { html: "" },
+        }),
+      );
+      expect(result).toBe(savedArticle);
+    });
+  });
+
   // ── update ───────────────────────────────────────────────
   describe("update", () => {
     it("updates provided fields and saves", async () => {
@@ -312,6 +425,57 @@ describe("MagazineArticlesService", () => {
 
       await expect(
         service.update(UID, "2099-01-01", { title: "x" }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ── updateBlockContent ───────────────────────────────────
+  describe("updateBlockContent", () => {
+    it("updates block content and saves", async () => {
+      const block = makeBlock({ id: "block-uuid-1", type: BlockType.RICHTEXT });
+      const article = makeArticle({ blocks: [block] as any });
+      const qb = makeQb(article);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      const newContent = { html: "<p>updated</p>" };
+      const savedBlock = { ...block, content: newContent };
+      blockRepo.save.mockResolvedValueOnce(savedBlock);
+
+      const result = await service.updateBlockContent(
+        UID,
+        "2026-04-20",
+        "block-uuid-1",
+        { content: newContent },
+      );
+
+      expect(blockRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ content: newContent }),
+      );
+      expect(result).toBe(savedBlock);
+    });
+
+    it("throws NotFoundException if blockId not in article", async () => {
+      const article = makeArticle({
+        blocks: [makeBlock({ id: "block-uuid-1" })] as any,
+      });
+      const qb = makeQb(article);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await expect(
+        service.updateBlockContent(UID, "2026-04-20", "nonexistent-block", {
+          content: { html: "" },
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("propagates NotFoundException if article not found", async () => {
+      const qb = makeQb(null);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await expect(
+        service.updateBlockContent(UID, "2099-01-01", "block-uuid-1", {
+          content: { html: "" },
+        }),
       ).rejects.toThrow(NotFoundException);
     });
   });

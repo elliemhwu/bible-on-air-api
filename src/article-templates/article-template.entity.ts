@@ -25,4 +25,7 @@ export class ArticleTemplate {
 
   @Column({ type: "jsonb" })
   blockDefinitions: BlockDefinition[];
+
+  @Column({ default: false })
+  isDefault: boolean;
 }
