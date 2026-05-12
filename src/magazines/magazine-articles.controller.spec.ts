@@ -1,5 +1,6 @@
 import { Article, ArticleStatus } from "../articles/article.entity";
 import { Block, BlockType } from "../blocks/block.entity";
+import { BatchCoverImageDto } from "./dto/batch-cover-image.dto";
 import { CreateMagazineArticleDto } from "./dto/create-magazine-article.dto";
 import { UpdateBlockContentDto } from "./dto/update-block-content.dto";
 import { UpdateMagazineArticleDto } from "./dto/update-magazine-article.dto";
@@ -47,6 +48,7 @@ describe("MagazineArticlesController", () => {
       findByDate: jest.fn(),
       create: jest.fn(),
       createBlocksFromTemplate: jest.fn(),
+      batchUpdateCoverImages: jest.fn(),
       update: jest.fn(),
       updateBlockContent: jest.fn(),
     } as any;
@@ -108,6 +110,19 @@ describe("MagazineArticlesController", () => {
 
     await expect(result).resolves.toBe(article);
     expect(service.update).toHaveBeenCalledWith(UID, "2026-04-20", dto);
+  });
+
+  it("batchUpdateCoverImages → delegates to service with uid and items", async () => {
+    const articles = [makeArticle()];
+    service.batchUpdateCoverImages.mockResolvedValueOnce(articles);
+    const dto: BatchCoverImageDto = {
+      items: [{ date: "2026-04-21", imageUrl: "/uploads/a.jpg" }],
+    };
+
+    const result = controller.batchUpdateCoverImages(UID, dto);
+
+    await expect(result).resolves.toBe(articles);
+    expect(service.batchUpdateCoverImages).toHaveBeenCalledWith(UID, dto.items);
   });
 
   it("updateBlockContent → delegates to service with uid, date, blockId and dto", async () => {

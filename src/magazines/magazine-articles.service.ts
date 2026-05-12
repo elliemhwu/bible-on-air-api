@@ -6,6 +6,7 @@ import { Article, ArticleStatus } from '../articles/article.entity';
 import { BibleService } from '../bible/bible.service';
 import { VerseBlockContent } from '../blocks/block-content.types';
 import { Block, BlockType } from '../blocks/block.entity';
+import { CoverImageItemDto } from './dto/batch-cover-image.dto';
 import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
 import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
 import { UpdateBlockContentDto } from './dto/update-block-content.dto';
@@ -141,6 +142,22 @@ export class MagazineArticlesService {
     }
     block.content = dto.content as any;
     return this.blockRepo.save(block);
+  }
+
+  async batchUpdateCoverImages(uid: string, items: CoverImageItemDto[]): Promise<Article[]> {
+    const dates = items.map((i) => i.date);
+    const articles = await this.articleRepo
+      .createQueryBuilder('article')
+      .where('article.publicationUid = :uid', { uid })
+      .andWhere('article.date IN (:...dates)', { dates })
+      .getMany();
+
+    const urlByDate = new Map(items.map((i) => [i.date, i.imageUrl]));
+    for (const article of articles) {
+      article.coverImageUrl = urlByDate.get(article.date) ?? article.coverImageUrl;
+    }
+
+    return this.articleRepo.save(articles);
   }
 
   async update(uid: string, date: string, dto: UpdateMagazineArticleDto): Promise<Article> {

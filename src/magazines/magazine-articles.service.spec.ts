@@ -429,6 +429,61 @@ describe("MagazineArticlesService", () => {
     });
   });
 
+  // ── batchUpdateCoverImages ───────────────────────────────
+  describe("batchUpdateCoverImages", () => {
+    it("updates coverImageUrl for matched articles and saves", async () => {
+      const a1 = makeArticle({ date: "2026-04-21", coverImageUrl: null });
+      const a2 = makeArticle({ id: "uuid-2", date: "2026-04-22", coverImageUrl: null });
+      const qb = makeQb([a1, a2]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+      articleRepo.save.mockResolvedValueOnce([
+        { ...a1, coverImageUrl: "/uploads/a.jpg" },
+        { ...a2, coverImageUrl: "/uploads/b.jpg" },
+      ]);
+
+      const result = await service.batchUpdateCoverImages(UID, [
+        { date: "2026-04-21", imageUrl: "/uploads/a.jpg" },
+        { date: "2026-04-22", imageUrl: "/uploads/b.jpg" },
+      ]);
+
+      expect(articleRepo.save).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ date: "2026-04-21", coverImageUrl: "/uploads/a.jpg" }),
+          expect.objectContaining({ date: "2026-04-22", coverImageUrl: "/uploads/b.jpg" }),
+        ]),
+      );
+      expect(result).toHaveLength(2);
+    });
+
+    it("silently skips dates with no matching article", async () => {
+      const qb = makeQb([]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+      articleRepo.save.mockResolvedValueOnce([]);
+
+      const result = await service.batchUpdateCoverImages(UID, [
+        { date: "2099-01-01", imageUrl: "/uploads/missing.jpg" },
+      ]);
+
+      expect(articleRepo.save).toHaveBeenCalledWith([]);
+      expect(result).toHaveLength(0);
+    });
+
+    it("queries only the given dates", async () => {
+      const qb = makeQb([]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+      articleRepo.save.mockResolvedValueOnce([]);
+
+      await service.batchUpdateCoverImages(UID, [
+        { date: "2026-04-21", imageUrl: "/uploads/a.jpg" },
+      ]);
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        "article.date IN (:...dates)",
+        { dates: ["2026-04-21"] },
+      );
+    });
+  });
+
   // ── updateBlockContent ───────────────────────────────────
   describe("updateBlockContent", () => {
     it("updates block content and saves", async () => {
