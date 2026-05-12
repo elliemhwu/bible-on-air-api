@@ -1,5 +1,7 @@
 import { Article, ArticleStatus } from "../articles/article.entity";
+import { Block, BlockType } from "../blocks/block.entity";
 import { CreateMagazineArticleDto } from "./dto/create-magazine-article.dto";
+import { UpdateBlockContentDto } from "./dto/update-block-content.dto";
 import { UpdateMagazineArticleDto } from "./dto/update-magazine-article.dto";
 import { MagazineArticlesController } from "./magazine-articles.controller";
 import { MagazineArticlesService } from "./magazine-articles.service";
@@ -22,6 +24,19 @@ function makeArticle(): Article {
   } as Article;
 }
 
+function makeBlock(): Block {
+  return {
+    id: "block-uuid-1",
+    articleId: "uuid-1",
+    order: 1,
+    type: BlockType.RICHTEXT,
+    subheading: null,
+    content: { html: "<p>text</p>" },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as Block;
+}
+
 describe("MagazineArticlesController", () => {
   let controller: MagazineArticlesController;
   let service: jest.Mocked<MagazineArticlesService>;
@@ -31,7 +46,9 @@ describe("MagazineArticlesController", () => {
       findAll: jest.fn(),
       findByDate: jest.fn(),
       create: jest.fn(),
+      createBlocksFromTemplate: jest.fn(),
       update: jest.fn(),
+      updateBlockContent: jest.fn(),
     } as any;
     controller = new MagazineArticlesController(service);
   });
@@ -72,6 +89,16 @@ describe("MagazineArticlesController", () => {
     expect(service.create).toHaveBeenCalledWith(UID, dto);
   });
 
+  it("createBlocks → delegates to service with uid and article id", async () => {
+    const article = makeArticle();
+    service.createBlocksFromTemplate.mockResolvedValueOnce(article as any);
+
+    const result = controller.createBlocks(UID, "uuid-1");
+
+    await expect(result).resolves.toBe(article);
+    expect(service.createBlocksFromTemplate).toHaveBeenCalledWith(UID, "uuid-1");
+  });
+
   it("update → delegates to service with uid, date and dto", async () => {
     const article = makeArticle();
     service.update.mockResolvedValueOnce(article);
@@ -81,5 +108,26 @@ describe("MagazineArticlesController", () => {
 
     await expect(result).resolves.toBe(article);
     expect(service.update).toHaveBeenCalledWith(UID, "2026-04-20", dto);
+  });
+
+  it("updateBlockContent → delegates to service with uid, date, blockId and dto", async () => {
+    const block = makeBlock();
+    service.updateBlockContent.mockResolvedValueOnce(block);
+    const dto: UpdateBlockContentDto = { content: { html: "<p>updated</p>" } };
+
+    const result = controller.updateBlockContent(
+      UID,
+      "2026-04-20",
+      "block-uuid-1",
+      dto,
+    );
+
+    await expect(result).resolves.toBe(block);
+    expect(service.updateBlockContent).toHaveBeenCalledWith(
+      UID,
+      "2026-04-20",
+      "block-uuid-1",
+      dto,
+    );
   });
 });
