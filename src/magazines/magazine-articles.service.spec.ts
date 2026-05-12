@@ -47,12 +47,21 @@ function makeQb(result: Article | null | Article[]) {
 describe("MagazineArticlesService", () => {
   let service: MagazineArticlesService;
   let articleRepo: ReturnType<typeof makeRepo>;
+  let templateRepo: ReturnType<typeof makeRepo> = makeRepo();
+  let blockRepo: ReturnType<typeof makeRepo> = makeRepo();
   let bibleService: jest.Mocked<BibleService>;
 
   beforeEach(() => {
     articleRepo = makeRepo();
+    templateRepo = makeRepo();
+    blockRepo = makeRepo();
     bibleService = { getVerses: jest.fn() } as any;
-    service = new MagazineArticlesService(articleRepo as any, bibleService);
+    service = new MagazineArticlesService(
+      articleRepo as any,
+      templateRepo as any,
+      blockRepo as any,
+      bibleService,
+    );
   });
 
   // ── create ───────────────────────────────────────────────
