@@ -4,6 +4,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
+import { BatchCoverImageDto } from './dto/batch-cover-image.dto';
 import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
 import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
 import { UpdateBlockContentDto } from './dto/update-block-content.dto';
@@ -11,6 +12,7 @@ import { UpdateMagazineArticleDto } from './dto/update-magazine-article.dto';
 import { MagazineArticlesService } from './magazine-articles.service';
 
 const EDITOR_ROLES = [UserRole.EDITOR, UserRole.REVIEWER, UserRole.MANAGER, UserRole.SUPER_ADMIN];
+const IMAGE_ROLES = [UserRole.IMAGE_EDITOR, UserRole.MANAGER, UserRole.SUPER_ADMIN];
 
 @ApiTags('Magazine Articles')
 @ApiParam({ name: 'uid', description: 'Magazine publication UID (e.g. bible-on-air)', example: 'bible-on-air' })
@@ -58,6 +60,16 @@ export class MagazineArticlesController {
   @ApiResponse({ status: 409, description: 'Article already has blocks' })
   createBlocks(@Param('uid') uid: string, @Param('id') id: string) {
     return this.magazineArticlesService.createBlocksFromTemplate(uid, id);
+  }
+
+  @Patch('cover-images')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...IMAGE_ROLES)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Batch update cover images for multiple articles' })
+  @ApiResponse({ status: 200, description: 'Returns updated articles' })
+  batchUpdateCoverImages(@Param('uid') uid: string, @Body() dto: BatchCoverImageDto) {
+    return this.magazineArticlesService.batchUpdateCoverImages(uid, dto.items);
   }
 
   @Patch(':date')
