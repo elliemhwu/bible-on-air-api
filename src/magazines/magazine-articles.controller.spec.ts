@@ -68,12 +68,15 @@ describe("MagazineArticlesController", () => {
   });
 
   it("findAll → delegates to service with uid and query", async () => {
-    const articles = [makeArticle()];
-    service.findAll.mockResolvedValueOnce(articles);
+    const response = {
+      data: [makeArticle()],
+      pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+    };
+    service.findAll.mockResolvedValueOnce(response);
 
     const result = controller.findAll(UID, { status: ComputedArticleStatus.DRAFT });
 
-    await expect(result).resolves.toBe(articles);
+    await expect(result).resolves.toBe(response);
     expect(service.findAll).toHaveBeenCalledWith(UID, { status: ComputedArticleStatus.DRAFT });
   });
 

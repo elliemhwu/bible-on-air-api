@@ -25,9 +25,14 @@ export class MagazineArticlesController {
   constructor(private readonly magazineArticlesService: MagazineArticlesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List all articles for a magazine' })
+  @ApiOperation({ summary: 'List articles for a magazine (paginated)' })
   @ApiQuery({ name: 'status', required: false, enum: ['draft', 'pending_review', 'approved', 'published'] })
-  @ApiResponse({ status: 200, description: 'Returns articles ordered by date descending' })
+  @ApiQuery({ name: 'dateFrom', required: false, description: 'YYYY-MM-DD' })
+  @ApiQuery({ name: 'dateTo', required: false, description: 'YYYY-MM-DD' })
+  @ApiQuery({ name: 'book', required: false, description: '書卷縮寫（abbrZh），e.g. 約' })
+  @ApiQuery({ name: 'page', required: false, description: '頁碼（預設 1）' })
+  @ApiQuery({ name: 'pageSize', required: false, description: '每頁筆數（預設 20）' })
+  @ApiResponse({ status: 200, description: 'Returns paginated articles ordered by date descending' })
   findAll(@Param('uid') uid: string, @Query() query: MagazineArticleQueryDto) {
     return this.magazineArticlesService.findAll(uid, query);
   }

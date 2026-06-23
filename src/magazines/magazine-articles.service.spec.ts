@@ -53,12 +53,16 @@ function makeRepo() {
 }
 
 function makeQb(result: Article | null | Article[]) {
+  const list = Array.isArray(result) ? result : [];
   const qb: any = {
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
-    getMany: jest.fn().mockResolvedValue(result),
+    skip: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    getMany: jest.fn().mockResolvedValue(list),
+    getManyAndCount: jest.fn().mockResolvedValue([list, list.length]),
     getOne: jest.fn().mockResolvedValue(result),
   };
   return qb;
@@ -190,20 +194,31 @@ describe("MagazineArticlesService", () => {
 
   // ── findAll ──────────────────────────────────────────────
   describe("findAll", () => {
-    it("returns articles with computed status, ordered by date", async () => {
-      const articles = [
-        makeArticle({ date: "2026-04-20" }),
-        makeArticle({ date: "2026-04-19" }),
-      ];
+    it("returns paginated result with data and pagination metadata", async () => {
+      const articles = [makeArticle({ date: "2026-04-20" }), makeArticle({ date: "2026-04-19" })];
       const qb = makeQb(articles);
       articleRepo.createQueryBuilder.mockReturnValue(qb);
 
       const result = await service.findAll(UID, {});
 
-      expect(result).toHaveLength(2);
-      expect(result[0].status).toBe(ComputedArticleStatus.DRAFT);
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].status).toBe(ComputedArticleStatus.DRAFT);
+      expect(result.pagination).toEqual({ page: 1, pageSize: 20, total: 2, totalPages: 1 });
       expect(qb.where).toHaveBeenCalledWith("article.publicationUid = :uid", { uid: UID });
       expect(qb.orderBy).toHaveBeenCalledWith("article.date", "DESC");
+      expect(qb.skip).toHaveBeenCalledWith(0);
+      expect(qb.take).toHaveBeenCalledWith(20);
+    });
+
+    it("respects custom page and pageSize", async () => {
+      const qb = makeQb([]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.findAll(UID, { page: 3, pageSize: 10 });
+
+      expect(qb.skip).toHaveBeenCalledWith(20);
+      expect(qb.take).toHaveBeenCalledWith(10);
+      expect(result.pagination).toMatchObject({ page: 3, pageSize: 10, totalPages: 0 });
     });
 
     it("applies visible=true filter for PUBLISHED status", async () => {
@@ -235,7 +250,37 @@ describe("MagazineArticlesService", () => {
       );
     });
 
-    it("does not apply status filter when omitted", async () => {
+    it("applies dateFrom filter", async () => {
+      const qb = makeQb([makeArticle()]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findAll(UID, { dateFrom: "2026-04-01" });
+
+      expect(qb.andWhere).toHaveBeenCalledWith("article.date >= :dateFrom", { dateFrom: "2026-04-01" });
+    });
+
+    it("applies dateTo filter", async () => {
+      const qb = makeQb([makeArticle()]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findAll(UID, { dateTo: "2026-04-30" });
+
+      expect(qb.andWhere).toHaveBeenCalledWith("article.date <= :dateTo", { dateTo: "2026-04-30" });
+    });
+
+    it("applies book filter with JSONB containment query", async () => {
+      const qb = makeQb([makeArticle()]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findAll(UID, { book: "約" });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining("@>"),
+        expect.objectContaining({ bookFilter: JSON.stringify([{ abbrZh: "約" }]) }),
+      );
+    });
+
+    it("does not call andWhere when no filters provided", async () => {
       const qb = makeQb([makeArticle()]);
       articleRepo.createQueryBuilder.mockReturnValue(qb);
 
@@ -559,7 +604,7 @@ describe("MagazineArticlesService", () => {
 
       const result = await service.findAll(UID, {});
 
-      expect(result[0].verseRange).toBe("約1:1-10");
+      expect(result.data[0].verseRange).toBe("約1:1-10");
     });
 
     it("joins multiple ranges with 、", async () => {
@@ -585,7 +630,7 @@ describe("MagazineArticlesService", () => {
 
       const result = await service.findAll(UID, {});
 
-      expect(result[0].verseRange).toBe("約1:1、約2:3-5");
+      expect(result.data[0].verseRange).toBe("約1:1、約2:3-5");
     });
 
     it("returns null when no verse block with subheading=null exists", async () => {
@@ -606,7 +651,7 @@ describe("MagazineArticlesService", () => {
 
       const result = await service.findAll(UID, {});
 
-      expect(result[0].verseRange).toBeNull();
+      expect(result.data[0].verseRange).toBeNull();
     });
   });
 

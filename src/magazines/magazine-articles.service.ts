@@ -128,38 +128,67 @@ export class MagazineArticlesService {
   async findAll(
     uid: string,
     query: MagazineArticleQueryDto,
-  ): Promise<
-    (Article & { status: ComputedArticleStatus; verseRange: string | null })[]
-  > {
+  ): Promise<{
+    data: (Article & { status: ComputedArticleStatus; verseRange: string | null })[];
+    pagination: { page: number; pageSize: number; total: number; totalPages: number };
+  }> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+
     const qb = this.articleRepo
-      .createQueryBuilder("article")
+      .createQueryBuilder('article')
       .leftJoinAndSelect(
-        "article.blocks",
-        "readingBlock",
-        "readingBlock.type = :vt AND readingBlock.subheading IS NULL",
+        'article.blocks',
+        'readingBlock',
+        'readingBlock.type = :vt AND readingBlock.subheading IS NULL',
         { vt: BlockType.VERSE },
       )
-      .where("article.publicationUid = :uid", { uid })
-      .orderBy("article.date", "DESC");
+      .where('article.publicationUid = :uid', { uid })
+      .orderBy('article.date', 'DESC')
+      .skip((page - 1) * pageSize)
+      .take(pageSize);
 
     if (query.status) {
       switch (query.status) {
         case ComputedArticleStatus.DRAFT:
-          qb.andWhere("article.submitted = false");
+          qb.andWhere('article.submitted = false');
           break;
         case ComputedArticleStatus.PENDING_REVIEW:
-          qb.andWhere("article.submitted = true AND article.reviewed = false");
+          qb.andWhere('article.submitted = true AND article.reviewed = false');
           break;
         case ComputedArticleStatus.APPROVED:
-          qb.andWhere("article.reviewed = true AND article.visible = false");
+          qb.andWhere('article.reviewed = true AND article.visible = false');
           break;
         case ComputedArticleStatus.PUBLISHED:
-          qb.andWhere("article.visible = true");
+          qb.andWhere('article.visible = true');
           break;
       }
     }
 
-    return (await qb.getMany()).map((a) => withStatus(withVerseRanges(a)));
+    if (query.dateFrom) {
+      qb.andWhere('article.date >= :dateFrom', { dateFrom: query.dateFrom });
+    }
+    if (query.dateTo) {
+      qb.andWhere('article.date <= :dateTo', { dateTo: query.dateTo });
+    }
+    if (query.book) {
+      qb.andWhere(
+        `EXISTS (
+          SELECT 1 FROM blocks b
+          WHERE b."articleId" = article.id
+            AND b.type = :vt
+            AND b.subheading IS NULL
+            AND b.content->'ranges' @> :bookFilter::jsonb
+        )`,
+        { bookFilter: JSON.stringify([{ abbrZh: query.book }]) },
+      );
+    }
+
+    const [articles, total] = await qb.getManyAndCount();
+    return {
+      data: articles.map((a) => withStatus(withVerseRanges(a))),
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    };
   }
 
   async findByDate(
