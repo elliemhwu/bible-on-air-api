@@ -1,8 +1,9 @@
 import { ConflictException, NotFoundException } from "@nestjs/common";
-import { Article, ArticleStatus } from "../articles/article.entity";
+import { Article } from "../articles/article.entity";
 import { BibleService } from "../bible/bible.service";
 import { VerseBlockContent } from "../blocks/block-content.types";
 import { Block, BlockType } from "../blocks/block.entity";
+import { ComputedArticleStatus } from "./dto/magazine-article-query.dto";
 import { MagazineArticlesService } from "./magazine-articles.service";
 
 const UID = "bible-on-air";
@@ -13,7 +14,9 @@ function makeArticle(overrides: Partial<Article> = {}): Article {
     publicationUid: UID,
     date: "2026-04-20",
     title: "測試靈修",
-    status: ArticleStatus.DRAFT,
+    submitted: false,
+    reviewed: false,
+    visible: false,
     articleTemplateId: null,
     coverImageUrl: null,
     publishedAt: null,
@@ -43,6 +46,7 @@ function makeRepo() {
     create: jest.fn(),
     save: jest.fn(),
     findOneBy: jest.fn(),
+    findBy: jest.fn(),
     createQueryBuilder: jest.fn(),
     manager: { create: jest.fn() },
   };
@@ -82,7 +86,7 @@ describe("MagazineArticlesService", () => {
 
   // ── create ───────────────────────────────────────────────
   describe("create", () => {
-    it("creates and saves article with default DRAFT status", async () => {
+    it("creates article with all booleans false by default", async () => {
       const article = makeArticle();
       articleRepo.create.mockReturnValue(article);
       articleRepo.save.mockResolvedValueOnce(article);
@@ -95,27 +99,22 @@ describe("MagazineArticlesService", () => {
       expect(articleRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           publicationUid: UID,
-          status: ArticleStatus.DRAFT,
+          submitted: false,
+          reviewed: false,
+          visible: false,
         }),
       );
-      expect(articleRepo.save).toHaveBeenCalledWith(article);
-      expect(result).toBe(article);
+      expect(result.status).toBe(ComputedArticleStatus.DRAFT);
     });
 
-    it("respects explicitly provided status", async () => {
-      const article = makeArticle({ status: ArticleStatus.PUBLISHED });
+    it("returns article with computed status", async () => {
+      const article = makeArticle({ submitted: true, reviewed: true, visible: true });
       articleRepo.create.mockReturnValue(article);
       articleRepo.save.mockResolvedValueOnce(article);
 
-      await service.create(UID, {
-        date: "2026-04-20",
-        title: "測試靈修",
-        status: ArticleStatus.PUBLISHED,
-      });
+      const result = await service.create(UID, { date: "2026-04-20", title: "測試" });
 
-      expect(articleRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ status: ArticleStatus.PUBLISHED }),
-      );
+      expect(result.status).toBe(ComputedArticleStatus.PUBLISHED);
     });
 
     it("maps blocks dto to entity shape", async () => {
@@ -170,10 +169,11 @@ describe("MagazineArticlesService", () => {
 
       expect(articleRepo.create).toHaveBeenCalledTimes(2);
       expect(articleRepo.save).toHaveBeenCalledWith([a1, a2]);
-      expect(result).toEqual([a1, a2]);
+      expect(result).toHaveLength(2);
+      expect(result[0].status).toBe(ComputedArticleStatus.DRAFT);
     });
 
-    it("defaults status to DRAFT", async () => {
+    it("always sets booleans to false", async () => {
       const article = makeArticle();
       articleRepo.create.mockReturnValueOnce(article);
       articleRepo.save.mockResolvedValueOnce([article]);
@@ -183,14 +183,14 @@ describe("MagazineArticlesService", () => {
       });
 
       expect(articleRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ status: ArticleStatus.DRAFT }),
+        expect.objectContaining({ submitted: false, reviewed: false, visible: false }),
       );
     });
   });
 
   // ── findAll ──────────────────────────────────────────────
   describe("findAll", () => {
-    it("returns articles ordered by date", async () => {
+    it("returns articles with computed status, ordered by date", async () => {
       const articles = [
         makeArticle({ date: "2026-04-20" }),
         makeArticle({ date: "2026-04-19" }),
@@ -200,22 +200,39 @@ describe("MagazineArticlesService", () => {
 
       const result = await service.findAll(UID, {});
 
-      expect(result).toBe(articles);
-      expect(qb.where).toHaveBeenCalledWith("article.publicationUid = :uid", {
-        uid: UID,
-      });
+      expect(result).toHaveLength(2);
+      expect(result[0].status).toBe(ComputedArticleStatus.DRAFT);
+      expect(qb.where).toHaveBeenCalledWith("article.publicationUid = :uid", { uid: UID });
       expect(qb.orderBy).toHaveBeenCalledWith("article.date", "DESC");
     });
 
-    it("applies status filter when provided", async () => {
+    it("applies visible=true filter for PUBLISHED status", async () => {
+      const qb = makeQb([makeArticle({ visible: true })]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findAll(UID, { status: ComputedArticleStatus.PUBLISHED });
+
+      expect(qb.andWhere).toHaveBeenCalledWith("article.visible = true");
+    });
+
+    it("applies submitted=false filter for DRAFT status", async () => {
       const qb = makeQb([makeArticle()]);
       articleRepo.createQueryBuilder.mockReturnValue(qb);
 
-      await service.findAll(UID, { status: ArticleStatus.PUBLISHED });
+      await service.findAll(UID, { status: ComputedArticleStatus.DRAFT });
 
-      expect(qb.andWhere).toHaveBeenCalledWith("article.status = :status", {
-        status: ArticleStatus.PUBLISHED,
-      });
+      expect(qb.andWhere).toHaveBeenCalledWith("article.submitted = false");
+    });
+
+    it("applies submitted+!reviewed filter for PENDING_REVIEW", async () => {
+      const qb = makeQb([makeArticle({ submitted: true })]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findAll(UID, { status: ComputedArticleStatus.PENDING_REVIEW });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        "article.submitted = true AND article.reviewed = false",
+      );
     });
 
     it("does not apply status filter when omitted", async () => {
@@ -239,14 +256,14 @@ describe("MagazineArticlesService", () => {
       );
     });
 
-    it("found with no verse blocks → returns article unchanged", async () => {
+    it("found with no verse blocks → returns article with computed status", async () => {
       const article = makeArticle({ blocks: [] });
       const qb = makeQb(article);
       articleRepo.createQueryBuilder.mockReturnValue(qb);
 
       const result = await service.findByDate(UID, "2026-04-20");
 
-      expect(result).toMatchObject({ id: article.id });
+      expect(result).toMatchObject({ id: article.id, status: ComputedArticleStatus.DRAFT });
       expect(bibleService.getVerses).not.toHaveBeenCalled();
     });
 
@@ -270,24 +287,11 @@ describe("MagazineArticlesService", () => {
       articleRepo.createQueryBuilder.mockReturnValue(qb);
 
       const verses = [
-        {
-          abbrZh: "出",
-          chapter: 13,
-          verse: 19,
-          text: "骸骨",
-          version: "nstrunv",
-        },
+        { abbrZh: "出", chapter: 13, verse: 19, text: "骸骨", version: "nstrunv" },
       ];
       bibleService.getVerses.mockResolvedValueOnce({
         ranges: [
-          {
-            abbrZh: "出",
-            zh: "出埃及記",
-            en: "Exodus",
-            abbrEn: "Exod",
-            chapterStart: 13,
-            verseStart: 19,
-          },
+          { abbrZh: "出", zh: "出埃及記", en: "Exodus", abbrEn: "Exod", chapterStart: 13, verseStart: 19 },
         ],
         verses,
       });
@@ -325,9 +329,7 @@ describe("MagazineArticlesService", () => {
   // ── createBlocksFromTemplate ─────────────────────────────
   describe("createBlocksFromTemplate", () => {
     it("throws ConflictException if article already has blocks", async () => {
-      const article = makeArticle({
-        blocks: [makeBlock()] as any,
-      });
+      const article = makeArticle({ blocks: [makeBlock()] as any });
       const qb = makeQb(article);
       articleRepo.createQueryBuilder.mockReturnValue(qb);
 
@@ -347,10 +349,7 @@ describe("MagazineArticlesService", () => {
     });
 
     it("throws NotFoundException if template does not exist", async () => {
-      const article = makeArticle({
-        blocks: [],
-        articleTemplateId: 1,
-      });
+      const article = makeArticle({ blocks: [], articleTemplateId: 1 });
       const qb = makeQb(article);
       articleRepo.createQueryBuilder.mockReturnValue(qb);
       templateRepo.findOneBy.mockResolvedValueOnce(null);
@@ -361,10 +360,7 @@ describe("MagazineArticlesService", () => {
     });
 
     it("creates blocks from template definitions and saves", async () => {
-      const article = makeArticle({
-        blocks: [],
-        articleTemplateId: 42,
-      });
+      const article = makeArticle({ blocks: [], articleTemplateId: 42 });
       const qb = makeQb(article);
       articleRepo.createQueryBuilder.mockReturnValue(qb);
 
@@ -396,26 +392,17 @@ describe("MagazineArticlesService", () => {
       expect(articleRepo.manager.create).toHaveBeenCalledTimes(3);
       expect(articleRepo.manager.create).toHaveBeenCalledWith(
         "Block",
-        expect.objectContaining({
-          type: BlockType.VERSE,
-          content: { ranges: [] },
-        }),
+        expect.objectContaining({ type: BlockType.VERSE, content: { ranges: [] } }),
       );
       expect(articleRepo.manager.create).toHaveBeenCalledWith(
         "Block",
-        expect.objectContaining({
-          type: BlockType.QUESTIONS,
-          content: { items: [] },
-        }),
+        expect.objectContaining({ type: BlockType.QUESTIONS, content: { items: [] } }),
       );
       expect(articleRepo.manager.create).toHaveBeenCalledWith(
         "Block",
-        expect.objectContaining({
-          type: BlockType.RICHTEXT,
-          content: { html: "" },
-        }),
+        expect.objectContaining({ type: BlockType.RICHTEXT, content: { html: "" } }),
       );
-      expect(result).toBe(savedArticle);
+      expect(result).toMatchObject({ id: savedArticle.id, status: ComputedArticleStatus.DRAFT });
     });
   });
 
@@ -428,32 +415,12 @@ describe("MagazineArticlesService", () => {
       const updated = { ...article, title: "新標題" } as Article;
       articleRepo.save.mockResolvedValueOnce(updated);
 
-      const result = await service.update(UID, "2026-04-20", {
-        title: "新標題",
-      });
+      const result = await service.update(UID, "2026-04-20", { title: "新標題" });
 
       expect(articleRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ title: "新標題" }),
       );
       expect(result.title).toBe("新標題");
-    });
-
-    it("updates status", async () => {
-      const article = makeArticle();
-      const qb = makeQb(article);
-      articleRepo.createQueryBuilder.mockReturnValue(qb);
-      articleRepo.save.mockResolvedValueOnce({
-        ...article,
-        status: ArticleStatus.PUBLISHED,
-      } as Article);
-
-      await service.update(UID, "2026-04-20", {
-        status: ArticleStatus.PUBLISHED,
-      });
-
-      expect(articleRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ status: ArticleStatus.PUBLISHED }),
-      );
     });
 
     it("not found → propagates NotFoundException from findByDate", async () => {
@@ -569,6 +536,82 @@ describe("MagazineArticlesService", () => {
           content: { html: "" },
         }),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ── batch status operations ──────────────────────────────
+  describe("batchSubmit", () => {
+    it("sets submitted=true and returns articles with PENDING_REVIEW status", async () => {
+      const article = makeArticle();
+      articleRepo.findBy.mockResolvedValueOnce([article]);
+      articleRepo.save.mockResolvedValueOnce([{ ...article, submitted: true }]);
+
+      const result = await service.batchSubmit(UID, ["uuid-1"]);
+
+      expect(articleRepo.save).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ submitted: true })]),
+      );
+      expect(result[0].status).toBe(ComputedArticleStatus.PENDING_REVIEW);
+    });
+  });
+
+  describe("batchReview", () => {
+    it("sets submitted+reviewed=true and returns articles with APPROVED status", async () => {
+      const article = makeArticle();
+      articleRepo.findBy.mockResolvedValueOnce([article]);
+      articleRepo.save.mockResolvedValueOnce([{ ...article, submitted: true, reviewed: true }]);
+
+      const result = await service.batchReview(UID, ["uuid-1"]);
+
+      expect(articleRepo.save).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ submitted: true, reviewed: true }),
+        ]),
+      );
+      expect(result[0].status).toBe(ComputedArticleStatus.APPROVED);
+    });
+  });
+
+  describe("batchPublish", () => {
+    it("sets all booleans true and writes publishedAt on first publish", async () => {
+      const article = makeArticle({ visible: false });
+      articleRepo.findBy.mockResolvedValueOnce([article]);
+      const saved = { ...article, submitted: true, reviewed: true, visible: true, publishedAt: new Date() };
+      articleRepo.save.mockResolvedValueOnce([saved]);
+
+      const result = await service.batchPublish(UID, ["uuid-1"]);
+
+      const savedArg = articleRepo.save.mock.calls[0][0][0];
+      expect(savedArg.visible).toBe(true);
+      expect(savedArg.publishedAt).toBeInstanceOf(Date);
+      expect(result[0].status).toBe(ComputedArticleStatus.PUBLISHED);
+    });
+
+    it("does not overwrite publishedAt if already visible", async () => {
+      const existingDate = new Date("2026-01-01");
+      const article = makeArticle({ visible: true, publishedAt: existingDate });
+      articleRepo.findBy.mockResolvedValueOnce([article]);
+      articleRepo.save.mockResolvedValueOnce([article]);
+
+      await service.batchPublish(UID, ["uuid-1"]);
+
+      const savedArg = articleRepo.save.mock.calls[0][0][0];
+      expect(savedArg.publishedAt).toBe(existingDate);
+    });
+  });
+
+  describe("batchUnpublish", () => {
+    it("sets visible=false and returns articles with APPROVED status", async () => {
+      const article = makeArticle({ submitted: true, reviewed: true, visible: true });
+      articleRepo.findBy.mockResolvedValueOnce([article]);
+      articleRepo.save.mockResolvedValueOnce([{ ...article, visible: false }]);
+
+      const result = await service.batchUnpublish(UID, ["uuid-1"]);
+
+      expect(articleRepo.save).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ visible: false })]),
+      );
+      expect(result[0].status).toBe(ComputedArticleStatus.APPROVED);
     });
   });
 });

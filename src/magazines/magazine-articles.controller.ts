@@ -6,13 +6,16 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { BatchCoverImageDto } from './dto/batch-cover-image.dto';
 import { BatchCreateArticleDto } from './dto/batch-create-article.dto';
+import { BatchStatusDto } from './dto/batch-status.dto';
 import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
 import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
 import { UpdateBlockContentDto } from './dto/update-block-content.dto';
 import { UpdateMagazineArticleDto } from './dto/update-magazine-article.dto';
 import { MagazineArticlesService } from './magazine-articles.service';
 
-const EDITOR_ROLES = [UserRole.EDITOR, UserRole.REVIEWER, UserRole.MANAGER, UserRole.SUPER_ADMIN];
+const EDITOR_AND_ABOVE = [UserRole.EDITOR, UserRole.REVIEWER, UserRole.MANAGER, UserRole.SUPER_ADMIN];
+const REVIEWER_AND_ABOVE = [UserRole.REVIEWER, UserRole.MANAGER, UserRole.SUPER_ADMIN];
+const MANAGER_AND_ABOVE = [UserRole.MANAGER, UserRole.SUPER_ADMIN];
 const IMAGE_ROLES = [UserRole.IMAGE_EDITOR, UserRole.MANAGER, UserRole.SUPER_ADMIN];
 
 @ApiTags('Magazine Articles')
@@ -23,7 +26,7 @@ export class MagazineArticlesController {
 
   @Get()
   @ApiOperation({ summary: 'List all articles for a magazine' })
-  @ApiQuery({ name: 'status', required: false, enum: ['draft', 'reviewed', 'published'] })
+  @ApiQuery({ name: 'status', required: false, enum: ['draft', 'pending_review', 'approved', 'published'] })
   @ApiResponse({ status: 200, description: 'Returns articles ordered by date descending' })
   findAll(@Param('uid') uid: string, @Query() query: MagazineArticleQueryDto) {
     return this.magazineArticlesService.findAll(uid, query);
@@ -40,7 +43,7 @@ export class MagazineArticlesController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(...EDITOR_ROLES)
+  @Roles(...EDITOR_AND_ABOVE)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new magazine article' })
   @ApiResponse({ status: 201, description: 'Article created successfully' })
@@ -52,7 +55,7 @@ export class MagazineArticlesController {
 
   @Post('batch')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(...EDITOR_ROLES)
+  @Roles(...EDITOR_AND_ABOVE)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Batch create magazine articles (for migration)' })
   @ApiResponse({ status: 201, description: 'Articles created successfully' })
@@ -62,9 +65,49 @@ export class MagazineArticlesController {
     return this.magazineArticlesService.batchCreate(uid, dto);
   }
 
+  @Post('batch-submit')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...EDITOR_AND_ABOVE)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Batch submit articles for review' })
+  @ApiResponse({ status: 201, description: 'Articles submitted' })
+  batchSubmit(@Param('uid') uid: string, @Body() dto: BatchStatusDto) {
+    return this.magazineArticlesService.batchSubmit(uid, dto.ids);
+  }
+
+  @Post('batch-review')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...REVIEWER_AND_ABOVE)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Batch mark articles as reviewed' })
+  @ApiResponse({ status: 201, description: 'Articles reviewed' })
+  batchReview(@Param('uid') uid: string, @Body() dto: BatchStatusDto) {
+    return this.magazineArticlesService.batchReview(uid, dto.ids);
+  }
+
+  @Post('batch-publish')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...MANAGER_AND_ABOVE)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Batch publish articles (set visible = true)' })
+  @ApiResponse({ status: 201, description: 'Articles published' })
+  batchPublish(@Param('uid') uid: string, @Body() dto: BatchStatusDto) {
+    return this.magazineArticlesService.batchPublish(uid, dto.ids);
+  }
+
+  @Post('batch-unpublish')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...MANAGER_AND_ABOVE)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Batch unpublish articles (set visible = false)' })
+  @ApiResponse({ status: 201, description: 'Articles unpublished' })
+  batchUnpublish(@Param('uid') uid: string, @Body() dto: BatchStatusDto) {
+    return this.magazineArticlesService.batchUnpublish(uid, dto.ids);
+  }
+
   @Post(':id/blocks')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(...EDITOR_ROLES)
+  @Roles(...EDITOR_AND_ABOVE)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create default blocks for an article from its article template' })
   @ApiParam({ name: 'id', description: 'Article UUID' })
@@ -87,7 +130,7 @@ export class MagazineArticlesController {
 
   @Patch(':date')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(...EDITOR_ROLES)
+  @Roles(...EDITOR_AND_ABOVE)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a magazine article' })
   @ApiParam({ name: 'date', description: 'Article date in YYYY-MM-DD format', example: '2026-04-20' })
@@ -103,9 +146,9 @@ export class MagazineArticlesController {
 
   @Patch(':date/blocks/:blockId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(...EDITOR_ROLES)
+  @Roles(...EDITOR_AND_ABOVE)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update a block\'s content' })
+  @ApiOperation({ summary: "Update a block's content" })
   @ApiParam({ name: 'date', description: 'Article date in YYYY-MM-DD format', example: '2026-04-20' })
   @ApiParam({ name: 'blockId', description: 'Block UUID' })
   @ApiResponse({ status: 200, description: 'Block updated successfully' })

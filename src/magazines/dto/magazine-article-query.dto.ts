@@ -1,8 +1,14 @@
 import { IsEnum, IsOptional } from 'class-validator';
-import { ArticleStatus } from '../../articles/article.entity';
+
+export enum ComputedArticleStatus {
+  DRAFT = 'draft',
+  PENDING_REVIEW = 'pending_review',
+  APPROVED = 'approved',
+  PUBLISHED = 'published',
+}
 
 export class MagazineArticleQueryDto {
   @IsOptional()
-  @IsEnum(ArticleStatus)
-  status?: ArticleStatus;
+  @IsEnum(ComputedArticleStatus)
+  status?: ComputedArticleStatus;
 }
