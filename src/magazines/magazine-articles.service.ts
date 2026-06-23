@@ -1,27 +1,63 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
-import { ArticleTemplate } from '../article-templates/article-template.entity';
-import { Article } from '../articles/article.entity';
-import { BibleService } from '../bible/bible.service';
-import { VerseBlockContent } from '../blocks/block-content.types';
-import { Block, BlockType } from '../blocks/block.entity';
-import { CoverImageItemDto } from './dto/batch-cover-image.dto';
-import { BatchCreateArticleDto } from './dto/batch-create-article.dto';
-import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
-import { ComputedArticleStatus, MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
-import { UpdateBlockContentDto } from './dto/update-block-content.dto';
-import { UpdateMagazineArticleDto } from './dto/update-magazine-article.dto';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { In, Repository } from "typeorm";
+import { ArticleTemplate } from "../article-templates/article-template.entity";
+import { Article } from "../articles/article.entity";
+import { BibleService } from "../bible/bible.service";
+import { VerseBlockContent, VerseRange } from "../blocks/block-content.types";
+import { Block, BlockType } from "../blocks/block.entity";
+import { CoverImageItemDto } from "./dto/batch-cover-image.dto";
+import { BatchCreateArticleDto } from "./dto/batch-create-article.dto";
+import { CreateMagazineArticleDto } from "./dto/create-magazine-article.dto";
+import {
+  ComputedArticleStatus,
+  MagazineArticleQueryDto,
+} from "./dto/magazine-article-query.dto";
+import { UpdateBlockContentDto } from "./dto/update-block-content.dto";
+import { UpdateMagazineArticleDto } from "./dto/update-magazine-article.dto";
 
-export function computeStatus(article: Pick<Article, 'submitted' | 'reviewed' | 'visible'>): ComputedArticleStatus {
+export function computeStatus(
+  article: Pick<Article, "submitted" | "reviewed" | "visible">,
+): ComputedArticleStatus {
   if (article.visible) return ComputedArticleStatus.PUBLISHED;
   if (article.reviewed) return ComputedArticleStatus.APPROVED;
   if (article.submitted) return ComputedArticleStatus.PENDING_REVIEW;
   return ComputedArticleStatus.DRAFT;
 }
 
-function withStatus<T extends Pick<Article, 'submitted' | 'reviewed' | 'visible'>>(article: T) {
+export function formatVerseRange(range: VerseRange): string {
+  const { abbrZh, chapterStart, verseStart, chapterEnd, verseEnd } = range;
+  if (!chapterEnd || chapterEnd === chapterStart) {
+    return verseEnd
+      ? `${abbrZh}${chapterStart}:${verseStart}-${verseEnd}`
+      : `${abbrZh}${chapterStart}:${verseStart}`;
+  }
+  return `${abbrZh}${chapterStart}:${verseStart}-${chapterEnd}:${verseEnd}`;
+}
+
+export function formatVerseRanges(ranges: VerseRange[]): string {
+  return ranges.map(formatVerseRange).join("、");
+}
+
+function withStatus<
+  T extends Pick<Article, "submitted" | "reviewed" | "visible">,
+>(article: T) {
   return { ...article, status: computeStatus(article) };
+}
+
+function withVerseRanges<T extends { blocks?: Block[] }>(
+  article: T,
+): T & { verseRange: string | null } {
+  const readingBlock = article.blocks?.find(
+    (b) => b.type === BlockType.VERSE && b.subheading === null,
+  );
+  const ranges = (readingBlock?.content as VerseBlockContent | null)?.ranges;
+  const verseRange = ranges?.length ? formatVerseRanges(ranges) : null;
+  return { ...article, verseRange };
 }
 
 @Injectable()
@@ -36,7 +72,10 @@ export class MagazineArticlesService {
     private readonly bibleService: BibleService,
   ) {}
 
-  async create(uid: string, dto: CreateMagazineArticleDto): Promise<Article & { status: ComputedArticleStatus }> {
+  async create(
+    uid: string,
+    dto: CreateMagazineArticleDto,
+  ): Promise<Article & { status: ComputedArticleStatus }> {
     const article = this.articleRepo.create({
       publicationUid: uid,
       date: dto.date,
@@ -59,7 +98,10 @@ export class MagazineArticlesService {
     return withStatus(await this.articleRepo.save(article));
   }
 
-  async batchCreate(uid: string, dto: BatchCreateArticleDto): Promise<(Article & { status: ComputedArticleStatus })[]> {
+  async batchCreate(
+    uid: string,
+    dto: BatchCreateArticleDto,
+  ): Promise<(Article & { status: ComputedArticleStatus })[]> {
     const articles = dto.items.map((item) =>
       this.articleRepo.create({
         publicationUid: uid,
@@ -83,39 +125,53 @@ export class MagazineArticlesService {
     return (await this.articleRepo.save(articles)).map(withStatus);
   }
 
-  async findAll(uid: string, query: MagazineArticleQueryDto): Promise<(Article & { status: ComputedArticleStatus })[]> {
+  async findAll(
+    uid: string,
+    query: MagazineArticleQueryDto,
+  ): Promise<
+    (Article & { status: ComputedArticleStatus; verseRange: string | null })[]
+  > {
     const qb = this.articleRepo
-      .createQueryBuilder('article')
-      .where('article.publicationUid = :uid', { uid })
-      .orderBy('article.date', 'DESC');
+      .createQueryBuilder("article")
+      .leftJoinAndSelect(
+        "article.blocks",
+        "readingBlock",
+        "readingBlock.type = :vt AND readingBlock.subheading IS NULL",
+        { vt: BlockType.VERSE },
+      )
+      .where("article.publicationUid = :uid", { uid })
+      .orderBy("article.date", "DESC");
 
     if (query.status) {
       switch (query.status) {
         case ComputedArticleStatus.DRAFT:
-          qb.andWhere('article.submitted = false');
+          qb.andWhere("article.submitted = false");
           break;
         case ComputedArticleStatus.PENDING_REVIEW:
-          qb.andWhere('article.submitted = true AND article.reviewed = false');
+          qb.andWhere("article.submitted = true AND article.reviewed = false");
           break;
         case ComputedArticleStatus.APPROVED:
-          qb.andWhere('article.reviewed = true AND article.visible = false');
+          qb.andWhere("article.reviewed = true AND article.visible = false");
           break;
         case ComputedArticleStatus.PUBLISHED:
-          qb.andWhere('article.visible = true');
+          qb.andWhere("article.visible = true");
           break;
       }
     }
 
-    return (await qb.getMany()).map(withStatus);
+    return (await qb.getMany()).map((a) => withStatus(withVerseRanges(a)));
   }
 
-  async findByDate(uid: string, date: string): Promise<Article & { status: ComputedArticleStatus }> {
+  async findByDate(
+    uid: string,
+    date: string,
+  ): Promise<Article & { status: ComputedArticleStatus }> {
     const article = await this.articleRepo
-      .createQueryBuilder('article')
-      .where('article.publicationUid = :uid', { uid })
-      .andWhere('article.date = :date', { date })
-      .leftJoinAndSelect('article.blocks', 'blocks')
-      .orderBy('blocks.order', 'ASC')
+      .createQueryBuilder("article")
+      .where("article.publicationUid = :uid", { uid })
+      .andWhere("article.date = :date", { date })
+      .leftJoinAndSelect("article.blocks", "blocks")
+      .orderBy("blocks.order", "ASC")
       .getOne();
 
     if (!article) {
@@ -135,11 +191,11 @@ export class MagazineArticlesService {
 
   async findById(uid: string, id: string): Promise<Article> {
     const article = await this.articleRepo
-      .createQueryBuilder('article')
-      .where('article.publicationUid = :uid', { uid })
-      .andWhere('article.id = :id', { id })
-      .leftJoinAndSelect('article.blocks', 'blocks')
-      .orderBy('blocks.order', 'ASC')
+      .createQueryBuilder("article")
+      .where("article.publicationUid = :uid", { uid })
+      .andWhere("article.id = :id", { id })
+      .leftJoinAndSelect("article.blocks", "blocks")
+      .orderBy("blocks.order", "ASC")
       .getOne();
 
     if (!article) {
@@ -149,7 +205,10 @@ export class MagazineArticlesService {
     return article;
   }
 
-  async createBlocksFromTemplate(uid: string, id: string): Promise<Article & { status: ComputedArticleStatus }> {
+  async createBlocksFromTemplate(
+    uid: string,
+    id: string,
+  ): Promise<Article & { status: ComputedArticleStatus }> {
     const article = await this.findById(uid, id);
 
     if (article.blocks.length > 0) {
@@ -160,9 +219,13 @@ export class MagazineArticlesService {
       throw new NotFoundException(`Article ${id} has no articleTemplateId`);
     }
 
-    const template = await this.templateRepo.findOneBy({ id: article.articleTemplateId });
+    const template = await this.templateRepo.findOneBy({
+      id: article.articleTemplateId,
+    });
     if (!template) {
-      throw new NotFoundException(`ArticleTemplate #${article.articleTemplateId} not found`);
+      throw new NotFoundException(
+        `ArticleTemplate #${article.articleTemplateId} not found`,
+      );
     }
 
     article.blocks = template.blockDefinitions.map((def) => {
@@ -172,9 +235,9 @@ export class MagazineArticlesService {
       } else if (def.type === BlockType.QUESTIONS) {
         content = { items: [] };
       } else {
-        content = { html: '' };
+        content = { html: "" };
       }
-      return this.articleRepo.manager.create('Block', {
+      return this.articleRepo.manager.create("Block", {
         order: def.order,
         type: def.type,
         subheading: def.subheading,
@@ -185,52 +248,80 @@ export class MagazineArticlesService {
     return withStatus(await this.articleRepo.save(article));
   }
 
-  async updateBlockContent(uid: string, date: string, blockId: string, dto: UpdateBlockContentDto): Promise<Block> {
+  async updateBlockContent(
+    uid: string,
+    date: string,
+    blockId: string,
+    dto: UpdateBlockContentDto,
+  ): Promise<Block> {
     const article = await this.findByDate(uid, date);
     const block = article.blocks.find((b) => b.id === blockId);
     if (!block) {
-      throw new NotFoundException(`Block ${blockId} not found on article ${date}`);
+      throw new NotFoundException(
+        `Block ${blockId} not found on article ${date}`,
+      );
     }
     block.content = dto.content as any;
     return this.blockRepo.save(block);
   }
 
-  async batchUpdateCoverImages(uid: string, items: CoverImageItemDto[]): Promise<(Article & { status: ComputedArticleStatus })[]> {
+  async batchUpdateCoverImages(
+    uid: string,
+    items: CoverImageItemDto[],
+  ): Promise<(Article & { status: ComputedArticleStatus })[]> {
     const dates = items.map((i) => i.date);
     const articles = await this.articleRepo
-      .createQueryBuilder('article')
-      .where('article.publicationUid = :uid', { uid })
-      .andWhere('article.date IN (:...dates)', { dates })
+      .createQueryBuilder("article")
+      .where("article.publicationUid = :uid", { uid })
+      .andWhere("article.date IN (:...dates)", { dates })
       .getMany();
 
     const urlByDate = new Map(items.map((i) => [i.date, i.imageUrl]));
     for (const article of articles) {
-      article.coverImageUrl = urlByDate.get(article.date) ?? article.coverImageUrl;
+      article.coverImageUrl =
+        urlByDate.get(article.date) ?? article.coverImageUrl;
     }
 
     return (await this.articleRepo.save(articles)).map(withStatus);
   }
 
-  async update(uid: string, date: string, dto: UpdateMagazineArticleDto): Promise<Article & { status: ComputedArticleStatus }> {
+  async update(
+    uid: string,
+    date: string,
+    dto: UpdateMagazineArticleDto,
+  ): Promise<Article & { status: ComputedArticleStatus }> {
     const article = await this.findByDate(uid, date);
 
     if (dto.title !== undefined) article.title = dto.title;
-    if (dto.coverImageUrl !== undefined) article.coverImageUrl = dto.coverImageUrl;
+    if (dto.coverImageUrl !== undefined)
+      article.coverImageUrl = dto.coverImageUrl;
     if (dto.date !== undefined) article.date = dto.date;
 
     return withStatus(await this.articleRepo.save(article));
   }
 
-  async batchSubmit(uid: string, ids: string[]): Promise<(Article & { status: ComputedArticleStatus })[]> {
-    const articles = await this.articleRepo.findBy({ publicationUid: uid, id: In(ids) });
+  async batchSubmit(
+    uid: string,
+    ids: string[],
+  ): Promise<(Article & { status: ComputedArticleStatus })[]> {
+    const articles = await this.articleRepo.findBy({
+      publicationUid: uid,
+      id: In(ids),
+    });
     for (const article of articles) {
       article.submitted = true;
     }
     return (await this.articleRepo.save(articles)).map(withStatus);
   }
 
-  async batchReview(uid: string, ids: string[]): Promise<(Article & { status: ComputedArticleStatus })[]> {
-    const articles = await this.articleRepo.findBy({ publicationUid: uid, id: In(ids) });
+  async batchReview(
+    uid: string,
+    ids: string[],
+  ): Promise<(Article & { status: ComputedArticleStatus })[]> {
+    const articles = await this.articleRepo.findBy({
+      publicationUid: uid,
+      id: In(ids),
+    });
     for (const article of articles) {
       article.submitted = true;
       article.reviewed = true;
@@ -238,8 +329,14 @@ export class MagazineArticlesService {
     return (await this.articleRepo.save(articles)).map(withStatus);
   }
 
-  async batchPublish(uid: string, ids: string[]): Promise<(Article & { status: ComputedArticleStatus })[]> {
-    const articles = await this.articleRepo.findBy({ publicationUid: uid, id: In(ids) });
+  async batchPublish(
+    uid: string,
+    ids: string[],
+  ): Promise<(Article & { status: ComputedArticleStatus })[]> {
+    const articles = await this.articleRepo.findBy({
+      publicationUid: uid,
+      id: In(ids),
+    });
     const now = new Date();
     for (const article of articles) {
       const wasVisible = article.visible;
@@ -253,8 +350,14 @@ export class MagazineArticlesService {
     return (await this.articleRepo.save(articles)).map(withStatus);
   }
 
-  async batchUnpublish(uid: string, ids: string[]): Promise<(Article & { status: ComputedArticleStatus })[]> {
-    const articles = await this.articleRepo.findBy({ publicationUid: uid, id: In(ids) });
+  async batchUnpublish(
+    uid: string,
+    ids: string[],
+  ): Promise<(Article & { status: ComputedArticleStatus })[]> {
+    const articles = await this.articleRepo.findBy({
+      publicationUid: uid,
+      id: In(ids),
+    });
     for (const article of articles) {
       article.visible = false;
     }

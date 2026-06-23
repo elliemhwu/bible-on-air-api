@@ -12,7 +12,7 @@ import { MagazineArticlesService } from "./magazine-articles.service";
 
 const UID = "bible-on-air";
 
-function makeArticle(): Article & { status: ComputedArticleStatus } {
+function makeArticle(): Article & { status: ComputedArticleStatus; readingRange: string | null } {
   return {
     id: "uuid-1",
     publicationUid: UID,
@@ -28,6 +28,7 @@ function makeArticle(): Article & { status: ComputedArticleStatus } {
     createdAt: new Date(),
     updatedAt: new Date(),
     status: ComputedArticleStatus.DRAFT,
+    readingRange: null,
   } as any;
 }
 

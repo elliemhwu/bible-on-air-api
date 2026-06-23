@@ -4,7 +4,7 @@ import { BibleService } from "../bible/bible.service";
 import { VerseBlockContent } from "../blocks/block-content.types";
 import { Block, BlockType } from "../blocks/block.entity";
 import { ComputedArticleStatus } from "./dto/magazine-article-query.dto";
-import { MagazineArticlesService } from "./magazine-articles.service";
+import { formatVerseRange, MagazineArticlesService } from "./magazine-articles.service";
 
 const UID = "bible-on-air";
 
@@ -536,6 +536,90 @@ describe("MagazineArticlesService", () => {
           content: { html: "" },
         }),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ── findAll readingRange ─────────────────────────────────
+  describe("findAll readingRange", () => {
+    it("returns readingRange from verse block with subheading=null", async () => {
+      const article = makeArticle({
+        blocks: [
+          {
+            id: "b1",
+            articleId: "uuid-1",
+            order: 1,
+            type: BlockType.VERSE,
+            subheading: null,
+            content: { ranges: [{ abbrZh: "約", chapterStart: 1, verseStart: 1, verseEnd: 10 }] },
+          } as any,
+        ],
+      });
+      const qb = makeQb([article]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.findAll(UID, {});
+
+      expect(result[0].readingRange).toBe("約1:1-10");
+    });
+
+    it("joins multiple ranges with 、", async () => {
+      const article = makeArticle({
+        blocks: [
+          {
+            id: "b1",
+            articleId: "uuid-1",
+            order: 1,
+            type: BlockType.VERSE,
+            subheading: null,
+            content: {
+              ranges: [
+                { abbrZh: "約", chapterStart: 1, verseStart: 1 },
+                { abbrZh: "約", chapterStart: 2, verseStart: 3, chapterEnd: 2, verseEnd: 5 },
+              ],
+            },
+          } as any,
+        ],
+      });
+      const qb = makeQb([article]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.findAll(UID, {});
+
+      expect(result[0].readingRange).toBe("約1:1、約2:3-5");
+    });
+
+    it("returns null when no verse block with subheading=null exists", async () => {
+      const article = makeArticle({
+        blocks: [
+          {
+            id: "b1",
+            articleId: "uuid-1",
+            order: 4,
+            type: BlockType.VERSE,
+            subheading: "背誦經文",
+            content: { ranges: [{ abbrZh: "詩", chapterStart: 23, verseStart: 1 }] },
+          } as any,
+        ],
+      });
+      const qb = makeQb([article]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.findAll(UID, {});
+
+      expect(result[0].readingRange).toBeNull();
+    });
+  });
+
+  // ── formatVerseRange ─────────────────────────────────────
+  describe("formatVerseRange", () => {
+    it("single verse", () => {
+      expect(formatVerseRange({ abbrZh: "創", chapterStart: 1, verseStart: 1 })).toBe("創1:1");
+    });
+    it("same-chapter range", () => {
+      expect(formatVerseRange({ abbrZh: "約", chapterStart: 3, verseStart: 16, verseEnd: 18 })).toBe("約3:16-18");
+    });
+    it("cross-chapter range", () => {
+      expect(formatVerseRange({ abbrZh: "詩", chapterStart: 1, verseStart: 1, chapterEnd: 2, verseEnd: 5 })).toBe("詩1:1-2:5");
     });
   });
 
