@@ -1,5 +1,4 @@
-import { IsDateString, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
-import { ArticleStatus } from '../../articles/article.entity';
+import { IsDateString, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateMagazineArticleDto {
   @IsOptional()
@@ -10,10 +9,6 @@ export class UpdateMagazineArticleDto {
   @IsOptional()
   @IsString()
   coverImageUrl?: string;
-
-  @IsOptional()
-  @IsEnum(ArticleStatus)
-  status?: ArticleStatus;
 
   @IsOptional()
   @IsDateString()
