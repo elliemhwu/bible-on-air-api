@@ -29,7 +29,7 @@ export class MagazineArticlesController {
   @ApiQuery({ name: 'status', required: false, enum: ['draft', 'pending_review', 'approved', 'published'] })
   @ApiQuery({ name: 'dateFrom', required: false, description: 'YYYY-MM-DD' })
   @ApiQuery({ name: 'dateTo', required: false, description: 'YYYY-MM-DD' })
-  @ApiQuery({ name: 'book', required: false, description: '書卷縮寫（abbrZh），e.g. 約' })
+  @ApiQuery({ name: 'book', required: false, isArray: true, description: '書卷縮寫（abbrZh），可多選，e.g. book=約&book=創' })
   @ApiQuery({ name: 'page', required: false, description: '頁碼（預設 1）' })
   @ApiQuery({ name: 'pageSize', required: false, description: '每頁筆數（預設 20）' })
   @ApiResponse({ status: 200, description: 'Returns paginated articles ordered by date descending' })

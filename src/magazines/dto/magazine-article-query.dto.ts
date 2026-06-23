@@ -1,5 +1,5 @@
-import { Type } from 'class-transformer';
-import { IsDateString, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsArray, IsDateString, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export enum ComputedArticleStatus {
   DRAFT = 'draft',
@@ -22,8 +22,10 @@ export class MagazineArticleQueryDto {
   dateTo?: string;
 
   @IsOptional()
-  @IsString()
-  book?: string;
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  @IsArray()
+  @IsString({ each: true })
+  book?: string[];
 
   @IsOptional()
   @Type(() => Number)

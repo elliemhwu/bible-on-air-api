@@ -171,16 +171,16 @@ export class MagazineArticlesService {
     if (query.dateTo) {
       qb.andWhere('article.date <= :dateTo', { dateTo: query.dateTo });
     }
-    if (query.book) {
+    if (query.book?.length) {
       qb.andWhere(
         `EXISTS (
-          SELECT 1 FROM blocks b
+          SELECT 1 FROM blocks b, jsonb_array_elements(b.content->'ranges') AS r
           WHERE b."articleId" = article.id
             AND b.type = :vt
             AND b.subheading IS NULL
-            AND b.content->'ranges' @> :bookFilter::jsonb
+            AND r->>'abbrZh' = ANY(:books)
         )`,
-        { bookFilter: JSON.stringify([{ abbrZh: query.book }]) },
+        { books: query.book },
       );
     }
 

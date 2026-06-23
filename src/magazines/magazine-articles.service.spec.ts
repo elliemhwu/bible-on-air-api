@@ -268,16 +268,37 @@ describe("MagazineArticlesService", () => {
       expect(qb.andWhere).toHaveBeenCalledWith("article.date <= :dateTo", { dateTo: "2026-04-30" });
     });
 
-    it("applies book filter with JSONB containment query", async () => {
+    it("applies book filter with JSONB array elements query", async () => {
       const qb = makeQb([makeArticle()]);
       articleRepo.createQueryBuilder.mockReturnValue(qb);
 
-      await service.findAll(UID, { book: "約" });
+      await service.findAll(UID, { book: ["約"] });
 
       expect(qb.andWhere).toHaveBeenCalledWith(
-        expect.stringContaining("@>"),
-        expect.objectContaining({ bookFilter: JSON.stringify([{ abbrZh: "約" }]) }),
+        expect.stringContaining("= ANY(:books)"),
+        expect.objectContaining({ books: ["約"] }),
       );
+    });
+
+    it("passes multiple books to ANY filter", async () => {
+      const qb = makeQb([makeArticle()]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findAll(UID, { book: ["約", "創"] });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining("= ANY(:books)"),
+        expect.objectContaining({ books: ["約", "創"] }),
+      );
+    });
+
+    it("does not apply book filter when book is empty array", async () => {
+      const qb = makeQb([makeArticle()]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findAll(UID, { book: [] });
+
+      expect(qb.andWhere).not.toHaveBeenCalled();
     });
 
     it("does not call andWhere when no filters provided", async () => {
