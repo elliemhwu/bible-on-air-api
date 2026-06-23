@@ -539,9 +539,9 @@ describe("MagazineArticlesService", () => {
     });
   });
 
-  // ── findAll readingRange ─────────────────────────────────
-  describe("findAll readingRange", () => {
-    it("returns readingRange from verse block with subheading=null", async () => {
+  // ── findAll verseRange ─────────────────────────────────
+  describe("findAll verseRange", () => {
+    it("returns verseRange from verse block with subheading=null", async () => {
       const article = makeArticle({
         blocks: [
           {
@@ -559,7 +559,7 @@ describe("MagazineArticlesService", () => {
 
       const result = await service.findAll(UID, {});
 
-      expect(result[0].readingRange).toBe("約1:1-10");
+      expect(result[0].verseRange).toBe("約1:1-10");
     });
 
     it("joins multiple ranges with 、", async () => {
@@ -585,7 +585,7 @@ describe("MagazineArticlesService", () => {
 
       const result = await service.findAll(UID, {});
 
-      expect(result[0].readingRange).toBe("約1:1、約2:3-5");
+      expect(result[0].verseRange).toBe("約1:1、約2:3-5");
     });
 
     it("returns null when no verse block with subheading=null exists", async () => {
@@ -606,7 +606,7 @@ describe("MagazineArticlesService", () => {
 
       const result = await service.findAll(UID, {});
 
-      expect(result[0].readingRange).toBeNull();
+      expect(result[0].verseRange).toBeNull();
     });
   });
 
