@@ -227,7 +227,8 @@ export class MagazineArticlesService {
   ): Promise<string[]> {
     const qb = this.articleRepo
       .createQueryBuilder("article")
-      .select("article.date", "date")
+      // Format in SQL: raw `date` values would become JS Dates shifted to UTC
+      .select(`to_char(article.date, 'YYYY-MM-DD')`, "date")
       .where("article.publicationUid = :uid", { uid })
       .orderBy("article.date", "DESC");
     if (!includeHidden) {
