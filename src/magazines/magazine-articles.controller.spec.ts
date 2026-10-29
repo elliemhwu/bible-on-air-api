@@ -74,20 +74,30 @@ describe("MagazineArticlesController", () => {
     };
     service.findAll.mockResolvedValueOnce(response);
 
-    const result = controller.findAll(UID, { status: ComputedArticleStatus.DRAFT });
+    const result = controller.findAll(UID, { status: ComputedArticleStatus.DRAFT }, null);
 
     await expect(result).resolves.toBe(response);
-    expect(service.findAll).toHaveBeenCalledWith(UID, { status: ComputedArticleStatus.DRAFT });
+    expect(service.findAll).toHaveBeenCalledWith(
+      UID,
+      { status: ComputedArticleStatus.DRAFT },
+      { includeHidden: false },
+    );
   });
 
   it("findByDate → delegates to service with uid and date", async () => {
     const article = makeArticle();
     service.findByDate.mockResolvedValueOnce(article);
 
-    const result = controller.findByDate(UID, "2026-04-20");
+    const result = controller.findByDate(UID, "2026-04-20", null);
 
     await expect(result).resolves.toBe(article);
-    expect(service.findByDate).toHaveBeenCalledWith(UID, "2026-04-20");
+    expect(service.findByDate).toHaveBeenCalledWith(UID, "2026-04-20", { includeHidden: false });
+  });
+
+  it("findByDate → signed-in staff can see unpublished articles", async () => {
+    service.findByDate.mockResolvedValueOnce(makeArticle());
+    await controller.findByDate(UID, "2026-04-20", { sub: "u1", email: "e@x", roles: [] });
+    expect(service.findByDate).toHaveBeenCalledWith(UID, "2026-04-20", { includeHidden: true });
   });
 
   it("create → delegates to service with uid and dto", async () => {

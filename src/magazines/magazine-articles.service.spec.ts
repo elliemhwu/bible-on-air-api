@@ -210,6 +210,15 @@ describe("MagazineArticlesService", () => {
       expect(qb.take).toHaveBeenCalledWith(20);
     });
 
+    it("anonymous readers only get published articles", async () => {
+      const qb = makeQb([]);
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findAll(UID, {}, { includeHidden: false });
+
+      expect(qb.andWhere).toHaveBeenCalledWith("article.visible = true");
+    });
+
     it("respects custom page and pageSize", async () => {
       const qb = makeQb([]);
       articleRepo.createQueryBuilder.mockReturnValue(qb);
@@ -320,6 +329,29 @@ describe("MagazineArticlesService", () => {
       await expect(service.findByDate(UID, "2026-04-20")).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it("unpublished article for an anonymous reader → throws NotFoundException", async () => {
+      articleRepo.createQueryBuilder.mockReturnValue(makeQb(makeArticle({ visible: false })));
+
+      await expect(
+        service.findByDate(UID, "2026-04-20", { includeHidden: false }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("looks up by id when given a UUID", async () => {
+      const qb = makeQb(makeArticle());
+      articleRepo.createQueryBuilder.mockReturnValue(qb);
+      const id = "7c79ee9e-f3ab-4694-b96e-865535183e46";
+
+      await service.findByDate(UID, id);
+
+      expect(qb.andWhere).toHaveBeenCalledWith("article.id = :value", { value: id });
+    });
+
+    it("invalid date → throws NotFoundException without querying", async () => {
+      await expect(service.findByDate(UID, "favicon.ico")).rejects.toThrow(NotFoundException);
+      expect(articleRepo.createQueryBuilder).not.toHaveBeenCalled();
     });
 
     it("found with no verse blocks → returns article with computed status", async () => {
