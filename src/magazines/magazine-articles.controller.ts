@@ -1,7 +1,10 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtPayload } from '../auth/jwt.strategy';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { BatchCoverImageDto } from './dto/batch-cover-image.dto';
@@ -9,6 +12,7 @@ import { BatchCreateArticleDto } from './dto/batch-create-article.dto';
 import { BatchStatusDto } from './dto/batch-status.dto';
 import { CreateMagazineArticleDto } from './dto/create-magazine-article.dto';
 import { MagazineArticleQueryDto } from './dto/magazine-article-query.dto';
+import { ReplaceBlocksDto } from './dto/replace-blocks.dto';
 import { UpdateBlockContentDto } from './dto/update-block-content.dto';
 import { UpdateMagazineArticleDto } from './dto/update-magazine-article.dto';
 import { MagazineArticlesService } from './magazine-articles.service';
@@ -32,18 +36,35 @@ export class MagazineArticlesController {
   @ApiQuery({ name: 'book', required: false, isArray: true, description: '書卷縮寫（abbrZh），可多選，e.g. book=約&book=創' })
   @ApiQuery({ name: 'page', required: false, description: '頁碼（預設 1）' })
   @ApiQuery({ name: 'pageSize', required: false, description: '每頁筆數（預設 20）' })
-  @ApiResponse({ status: 200, description: 'Returns paginated articles ordered by date descending' })
-  findAll(@Param('uid') uid: string, @Query() query: MagazineArticleQueryDto) {
-    return this.magazineArticlesService.findAll(uid, query);
+  @ApiResponse({ status: 200, description: 'Returns paginated articles ordered by date descending; anonymous readers only see published articles' })
+  @UseGuards(OptionalJwtAuthGuard)
+  findAll(
+    @Param('uid') uid: string,
+    @Query() query: MagazineArticleQueryDto,
+    @CurrentUser() user: JwtPayload | null,
+  ) {
+    return this.magazineArticlesService.findAll(uid, query, { includeHidden: !!user });
+  }
+
+  @Get('dates')
+  @ApiOperation({ summary: 'List all article dates (for date pickers); anonymous readers only get published dates' })
+  @UseGuards(OptionalJwtAuthGuard)
+  findDates(@Param('uid') uid: string, @CurrentUser() user: JwtPayload | null) {
+    return this.magazineArticlesService.findDates(uid, { includeHidden: !!user });
   }
 
   @Get(':date')
-  @ApiOperation({ summary: 'Get a single magazine article by date' })
-  @ApiParam({ name: 'date', description: 'Article date in YYYY-MM-DD format', example: '2026-04-20' })
+  @ApiOperation({ summary: 'Get a single magazine article by date (or by id)' })
+  @ApiParam({ name: 'date', description: 'Article date in YYYY-MM-DD format, or the article UUID', example: '2026-04-20' })
   @ApiResponse({ status: 200, description: 'Returns the article with its blocks ordered by block order' })
-  @ApiResponse({ status: 404, description: 'No article found for the given date' })
-  findByDate(@Param('uid') uid: string, @Param('date') date: string) {
-    return this.magazineArticlesService.findByDate(uid, date);
+  @ApiResponse({ status: 404, description: 'No article found, or not published and the request is anonymous' })
+  @UseGuards(OptionalJwtAuthGuard)
+  findByDate(
+    @Param('uid') uid: string,
+    @Param('date') date: string,
+    @CurrentUser() user: JwtPayload | null,
+  ) {
+    return this.magazineArticlesService.findByDate(uid, date, { includeHidden: !!user });
   }
 
   @Post()
@@ -165,5 +186,22 @@ export class MagazineArticlesController {
     @Body() dto: UpdateBlockContentDto,
   ) {
     return this.magazineArticlesService.updateBlockContent(uid, date, blockId, dto);
+  }
+
+  @Put(':date/blocks')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(...EDITOR_AND_ABOVE)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Replace all blocks of an article',
+    description: 'Blocks with an id are updated, blocks without an id are created, and existing blocks not in the list are deleted.',
+  })
+  @ApiParam({ name: 'date', description: 'Article date in YYYY-MM-DD format', example: '2026-04-20' })
+  replaceBlocks(
+    @Param('uid') uid: string,
+    @Param('date') date: string,
+    @Body() dto: ReplaceBlocksDto,
+  ) {
+    return this.magazineArticlesService.replaceBlocks(uid, date, dto.blocks);
   }
 }

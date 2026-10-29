@@ -8,7 +8,7 @@ import { In, Repository } from "typeorm";
 import { ArticleTemplate } from "../article-templates/article-template.entity";
 import { Article } from "../articles/article.entity";
 import { BibleService } from "../bible/bible.service";
-import { VerseBlockContent, VerseRange } from "../blocks/block-content.types";
+import { BlockContent, VerseBlockContent, VerseRange } from "../blocks/block-content.types";
 import { Block, BlockType } from "../blocks/block.entity";
 import { CoverImageItemDto } from "./dto/batch-cover-image.dto";
 import { BatchCreateArticleDto } from "./dto/batch-create-article.dto";
@@ -17,8 +17,17 @@ import {
   ComputedArticleStatus,
   MagazineArticleQueryDto,
 } from "./dto/magazine-article-query.dto";
+import { ReplaceBlockDto } from "./dto/replace-blocks.dto";
 import { UpdateBlockContentDto } from "./dto/update-block-content.dto";
 import { UpdateMagazineArticleDto } from "./dto/update-magazine-article.dto";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export interface VisibilityOptions {
+  /** false for anonymous readers: unpublished articles are hidden */
+  includeHidden?: boolean;
+}
 
 export function computeStatus(
   article: Pick<Article, "submitted" | "reviewed" | "visible">,
@@ -41,6 +50,22 @@ export function formatVerseRange(range: VerseRange): string {
 
 export function formatVerseRanges(ranges: VerseRange[]): string {
   return ranges.map(formatVerseRange).join("、");
+}
+
+/** Verse blocks are returned with resolved verses; only the ranges are stored. */
+function stripResolvedVerses(content: BlockContent | null): BlockContent | null {
+  if (!content || !("ranges" in content)) return content;
+  const { verses: _verses, ...rest } = content as VerseBlockContent & { verses?: unknown };
+  return {
+    ...rest,
+    ranges: rest.ranges.map(({ abbrZh, chapterStart, verseStart, chapterEnd, verseEnd }) => ({
+      abbrZh,
+      chapterStart,
+      verseStart,
+      ...(chapterEnd !== undefined && { chapterEnd }),
+      ...(verseEnd !== undefined && { verseEnd }),
+    })),
+  };
 }
 
 function withStatus<
@@ -128,6 +153,7 @@ export class MagazineArticlesService {
   async findAll(
     uid: string,
     query: MagazineArticleQueryDto,
+    { includeHidden = true }: VisibilityOptions = {},
   ): Promise<{
     data: (Article & { status: ComputedArticleStatus; verseRange: string | null })[];
     pagination: { page: number; pageSize: number; total: number; totalPages: number };
@@ -147,6 +173,10 @@ export class MagazineArticlesService {
       .orderBy('article.date', 'DESC')
       .skip((page - 1) * pageSize)
       .take(pageSize);
+
+    if (!includeHidden) {
+      qb.andWhere('article.visible = true');
+    }
 
     if (query.status) {
       switch (query.status) {
@@ -191,19 +221,41 @@ export class MagazineArticlesService {
     };
   }
 
+  async findDates(
+    uid: string,
+    { includeHidden = true }: VisibilityOptions = {},
+  ): Promise<string[]> {
+    const qb = this.articleRepo
+      .createQueryBuilder("article")
+      // Format in SQL: raw `date` values would become JS Dates shifted to UTC
+      .select(`to_char(article.date, 'YYYY-MM-DD')`, "date")
+      .where("article.publicationUid = :uid", { uid })
+      .orderBy("article.date", "DESC");
+    if (!includeHidden) {
+      qb.andWhere("article.visible = true");
+    }
+    const rows = await qb.getRawMany<{ date: string }>();
+    return rows.map((r) => r.date);
+  }
+
+  /** `date` is a YYYY-MM-DD date or an article id. */
   async findByDate(
     uid: string,
     date: string,
+    { includeHidden = true }: VisibilityOptions = {},
   ): Promise<Article & { status: ComputedArticleStatus }> {
-    const article = await this.articleRepo
-      .createQueryBuilder("article")
-      .where("article.publicationUid = :uid", { uid })
-      .andWhere("article.date = :date", { date })
-      .leftJoinAndSelect("article.blocks", "blocks")
-      .orderBy("blocks.order", "ASC")
-      .getOne();
+    const column = UUID_RE.test(date) ? "id" : DATE_RE.test(date) ? "date" : null;
+    const article = column
+      ? await this.articleRepo
+          .createQueryBuilder("article")
+          .where("article.publicationUid = :uid", { uid })
+          .andWhere(`article.${column} = :value`, { value: date })
+          .leftJoinAndSelect("article.blocks", "blocks")
+          .orderBy("blocks.order", "ASC")
+          .getOne()
+      : null;
 
-    if (!article) {
+    if (!article || (!includeHidden && !article.visible)) {
       throw new NotFoundException(`No article for ${uid} on ${date}`);
     }
 
@@ -292,6 +344,39 @@ export class MagazineArticlesService {
     }
     block.content = dto.content as any;
     return this.blockRepo.save(block);
+  }
+
+  async replaceBlocks(
+    uid: string,
+    date: string,
+    blocks: ReplaceBlockDto[],
+  ): Promise<Block[]> {
+    const article = await this.findById(uid, (await this.findByDate(uid, date)).id);
+    const existingIds = new Set(article.blocks.map((b) => b.id));
+    const unknown = blocks.find((b) => b.id && !existingIds.has(b.id));
+    if (unknown) {
+      throw new NotFoundException(`Block ${unknown.id} not found on article ${date}`);
+    }
+
+    return this.blockRepo.manager.transaction(async (em) => {
+      const keep = new Set(blocks.map((b) => b.id).filter(Boolean));
+      const removed = article.blocks.filter((b) => !keep.has(b.id));
+      if (removed.length) await em.remove(removed);
+
+      const saved = await em.save(
+        blocks.map((b) =>
+          em.create(Block, {
+            id: b.id,
+            articleId: article.id,
+            order: b.order,
+            type: b.type,
+            subheading: b.subheading?.trim() || null,
+            content: stripResolvedVerses(b.content ?? null),
+          }),
+        ),
+      );
+      return saved.sort((a, b) => a.order - b.order);
+    });
   }
 
   async batchUpdateCoverImages(

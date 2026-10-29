@@ -3,11 +3,12 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { UPLOAD_DIR } from './uploads/upload-storage';
 
 async function bootstrap() {
-  // TODO: remove before production — replace with cloud storage (S3/R2)
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.useStaticAssets('uploads', { prefix: '/uploads' });
+  // Uploaded images live on local disk (a Docker volume in production)
+  app.useStaticAssets(UPLOAD_DIR, { prefix: '/uploads' });
 
   app.useGlobalPipes(
     new ValidationPipe({
