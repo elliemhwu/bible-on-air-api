@@ -11,12 +11,6 @@ import {
 import { Block } from "../blocks/block.entity";
 import { Publication } from "../publications/publication.entity";
 
-export enum ArticleStatus {
-  DRAFT = "draft",
-  REVIEWED = "reviewed",
-  PUBLISHED = "published",
-}
-
 class ArticleColumns {
   @PrimaryGeneratedColumn("uuid")
   id: string;
@@ -30,8 +24,14 @@ class ArticleColumns {
   @Column({ type: "varchar", length: 200, nullable: true })
   title: string | null;
 
-  @Column({ type: "varchar", length: 50 })
-  status: ArticleStatus;
+  @Column({ type: "boolean", default: false })
+  submitted: boolean;
+
+  @Column({ type: "boolean", default: false })
+  reviewed: boolean;
+
+  @Column({ type: "boolean", default: false })
+  visible: boolean;
 
   @Column({ type: "int", nullable: true })
   articleTemplateId: number | null;
