@@ -1,7 +1,5 @@
 import * as bcrypt from "bcryptjs";
-import * as dotenv from "dotenv";
-import "reflect-metadata";
-import { DataSource, In } from "typeorm";
+import { In } from "typeorm";
 import { ArticleTemplate } from "../../article-templates/article-template.entity";
 import { BlockType } from "../../blocks/block.entity";
 import {
@@ -10,23 +8,13 @@ import {
 } from "../../publications/publication.entity";
 import { Publisher } from "../../publishers/publisher.entity";
 import { User, UserRole } from "../../users/user.entity";
+import dataSource from "../data-source";
 
-dotenv.config();
-
-const dataSource = new DataSource({
-  type: "postgres",
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT, 10) || 5432,
-  username: process.env.DB_USERNAME || "postgres",
-  password: process.env.DB_PASSWORD || "password",
-  database: process.env.DB_DATABASE || "boa_db",
-  entities: [Publisher, Publication, User, ArticleTemplate],
-  synchronize: false,
-});
-
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const DEV_PASSWORD = "test1234";
 
-const SEED_USERS: { email: string; name: string; roles: UserRole[] }[] = [
+// Development only: one test account per role, all with DEV_PASSWORD
+const DEV_USERS: { email: string; name: string; roles: UserRole[] }[] = [
   {
     email: "super-admin@boa.test",
     name: "Super Admin",
@@ -69,14 +57,36 @@ async function seed() {
   );
   console.log("✓ Publication: bible-on-air");
 
-  const passwordHash = await bcrypt.hash(DEV_PASSWORD, 10);
+  if (!IS_PRODUCTION) {
+    const passwordHash = await bcrypt.hash(DEV_PASSWORD, 10);
+    for (const u of DEV_USERS) {
+      await userRepo.upsert(
+        { ...u, passwordHash },
+        { conflictPaths: ["email"], skipUpdateIfNoValuesChanged: false },
+      );
+      console.log(`✓ User: ${u.email}`);
+    }
+  }
 
-  for (const u of SEED_USERS) {
-    await userRepo.upsert(
-      { ...u, passwordHash },
-      { conflictPaths: ["email"], skipUpdateIfNoValuesChanged: false },
-    );
-    console.log(`✓ User: ${u.email}`);
+  // First administrator; created once and never overwritten afterwards
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (adminEmail && adminPassword) {
+    if (await userRepo.existsBy({ email: adminEmail })) {
+      console.log(`- Admin: ${adminEmail} (already exists, skipped)`);
+    } else {
+      await userRepo.save(
+        userRepo.create({
+          email: adminEmail,
+          name: process.env.ADMIN_NAME || "Administrator",
+          passwordHash: await bcrypt.hash(adminPassword, 10),
+          roles: [UserRole.SUPER_ADMIN, UserRole.MANAGER],
+        }),
+      );
+      console.log(`✓ Admin: ${adminEmail}`);
+    }
+  } else if (IS_PRODUCTION) {
+    console.log("- Admin: set ADMIN_EMAIL and ADMIN_PASSWORD to create the first account");
   }
 
   const templates = templateRepo.create([

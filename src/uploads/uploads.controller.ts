@@ -17,8 +17,9 @@ import {
 } from "@nestjs/swagger";
 import { diskStorage } from "multer";
 import { extname } from "path";
-import { v4 as uuid } from "uuid";
+import { randomUUID as uuid } from "crypto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { UPLOAD_DIR } from "./upload-storage";
 
 @ApiTags("Uploads")
 @Controller("uploads")
@@ -45,7 +46,7 @@ export class UploadsController {
   @UseInterceptors(
     FileInterceptor("file", {
       storage: diskStorage({
-        destination: "./uploads",
+        destination: UPLOAD_DIR,
         filename: (_req, file, cb) => {
           cb(null, `${uuid()}${extname(file.originalname)}`);
         },
