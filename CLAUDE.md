@@ -20,7 +20,7 @@ BOA 目前是一個 Google Site，每天發布一篇靈修內容，並透過 LIN
 | 環境變數 | @nestjs/config                      |
 
 前端（獨立 repo `bible-on-air-web`）：Next.js App Router
-部署目標：Vercel（前端）+ Railway 或 Render（後端）+ Supabase（DB）
+部署：Docker（`deploy/docker-compose.yml`：PostgreSQL + API + web），交由教會 IT 維運，詳見 `deploy/README.md`
 
 ---
 
@@ -33,6 +33,10 @@ src/
 ├── users/            # 使用者管理（CRUD、角色）
 ├── articles/         # 每日靈修文章內容
 ├── article-templates/        # 靈修內容模板與 block 定義
+├── magazines/        # 文章 API（列表、單篇、區塊、狀態流轉）
+├── legacy-sync/      # 從舊 Google Site 同步缺少的日子與內容
+├── uploads/          # 圖片上傳與儲存（UPLOAD_DIR）
+├── database/         # data-source、migrations、seed
 └── bible/            # 聖經經文查詢服務
 ```
 
@@ -94,7 +98,8 @@ Publication {
 
 Article {
   id, publicationId, date, articleTemplateId
-  status: enum [draft, reviewed, published]
+  submitted, reviewed, visible: boolean
+  // 計算出的 status：draft / pending_review / approved / published
   publishedAt, createdAt, updatedAt
 }
 
@@ -134,7 +139,7 @@ blocks: [
 ### Bible On Air 書卷鳥瞰 Template
 
 約 3%，當要開始一本新的書卷時使用；
-有時會缺少第二節「本書綱要」的部分，因此應該也要可以自行決定刪掉（這部分還沒有規劃）
+有時會缺少第二節「本書大綱」的部分；`本書大綱` 是 optional block，可在編輯頁刪除或重新加回
 
 ```
 blocks: [
@@ -200,10 +205,12 @@ const BIBLE_BOOKS = [
 ## 編輯與簽核流程
 
 ```
-editor   → 建立/編輯 Article（status: draft）
-reviewer → 標記為已校閱（status: reviewed）
-manager  → 按下發布（status: published）
+editor   → 建立/編輯 Article，送出校閱（submitted）
+reviewer → 標記為已校閱（reviewed）
+manager  → 按下發布（visible）
 ```
+
+- 未登入的讀者只看得到已發布（visible）的文章；帶 JWT 的請求可看到全部
 
 - 未來保留彈性：也許有一天不再需要統一發布的動作
 - 未來保留修改紀錄功能的擴充空間
@@ -234,7 +241,7 @@ manager  → 按下發布（status: published）
 - [x] `[2c]` Questions block 編輯（逐題輸入）
 - [x] `[2d]` Richtext block 編輯（選套件）
 - [x] `[2e]` 編輯已存在的文章
-- [ ] `[2f]` 補完編輯功能（例如鳥瞰 template 才比較會用到的 richtext 清單、subheading、鳥瞰 template 顯示）
+- [x] `[2f]` 補完編輯功能（例如鳥瞰 template 才比較會用到的 richtext 清單、subheading、鳥瞰 template 顯示）
 
 **3. 圖片上傳**
 
@@ -247,31 +254,33 @@ manager  → 按下發布（status: published）
 - [x] `[4b]` 爬蟲實作 + 資料驗證
 - [x] `[4c]` 跑最近 2-3 個月 + 建立 SOP
 
+- [x] `[4d]` 爬蟲移入 API（`legacy-sync` 模組），後台「從舊網站同步」與編輯頁「從舊網站補齊」
+
 **5. Editor & Image Editor Dashboard**
 
-- [ ] `[5a]` Editor dashboard（所有 draft / reviewed 文章列表）
-- [ ] `[5b]` Image editor dashboard（待上傳圖片日期列表）
+- [x] `[5a]` Editor dashboard（所有 draft / reviewed 文章列表）
+- [x] `[5b]` Image editor dashboard（待上傳圖片日期列表）
 
 **6. History View**
 
-- [ ] `[6a]` 後端：取得某月所有文章 API
-- [ ] `[6b]` 前端：Monthly list view
+- [x] `[6a]` 後端：取得某月所有文章 API
+- [x] `[6b]` 前端：Monthly list view
 
 **7. Review mode + Reviewer Dashboard**
 
-- [ ] `[7a]` Reviewer dashboard（待 review 文章列表）
-- [ ] `[7b]` Review mode UI（閱讀視圖 + hover edit）
-- [ ] `[7c]` 狀態流轉 API（draft → reviewed）
+- [x] `[7a]` Reviewer dashboard（待 review 文章列表）
+- [x] `[7b]` Review mode UI（閱讀視圖 + 狀態按鈕 + 下一篇；編輯走編輯頁，hover edit 尚未實作）
+- [x] `[7c]` 狀態流轉 API（draft → reviewed）
 
 **8. Manager 發布 + Dashboard**
 
-- [ ] `[8a]` 發布 API（reviewed → published）
-- [ ] `[8b]` Manager dashboard + 發布按鈕
+- [x] `[8a]` 發布 API（reviewed → published）
+- [x] `[8b]` Manager dashboard + 發布按鈕
 
 **9. PDF 匯出**
 
-- [ ] `[9a]` 後端產生 PDF（單日或週）
-- [ ] `[9b]` 前端下載入口
+- [x] `[9a]` PDF：改為前端列印頁（`/studio/print`）由瀏覽器存成 PDF，保留中文字型，不需後端 PDF 引擎
+- [x] `[9b]` 前端下載入口
 
 ### 暫緩到 Stage 2+
 
@@ -306,6 +315,10 @@ yarn build
 # 執行測試
 yarn test
 yarn test:e2e
+
+# Migration（啟動時也會自動執行）
+yarn migration:generate src/database/migrations/<Name>
+yarn migration:run
 ```
 
 ---
@@ -321,7 +334,7 @@ yarn test:e2e
 - API 路由統一加上 `/api/v1` 前綴
 - DTO 一律使用 `class-validator` 裝飾器做輸入驗證
 - Entity 檔案命名：`*.entity.ts`，TypeORM 會自動掃描
-- `synchronize: true` 僅在非 production 環境啟用
+- Schema 變更一律寫 migration（`src/database/migrations`），啟動時自動執行；`DB_SYNCHRONIZE=true` 只用於本機實驗
 - 語言：程式碼與註解用英文，CLAUDE.md 與內部文件用中文
 - Block 的 `content` 欄位依 type 不同儲存不同結構的 JSON，不要用多張表硬拆
 
