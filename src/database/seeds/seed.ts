@@ -22,7 +22,10 @@ const DEV_USERS: { email: string; name: string; roles: UserRole[] }[] = [
   },
   { email: "manager@boa.test", name: "Manager", roles: [UserRole.MANAGER] },
   { email: "editor@boa.test", name: "Editor", roles: [UserRole.EDITOR] },
+  { email: "editor2@boa.test", name: "Editor 2", roles: [UserRole.EDITOR] },
+  { email: "editor3@boa.test", name: "Editor 3", roles: [UserRole.EDITOR] },
   { email: "reviewer@boa.test", name: "Reviewer", roles: [UserRole.REVIEWER] },
+  { email: "reviewer2@boa.test", name: "Reviewer 2", roles: [UserRole.REVIEWER] },
   {
     email: "image-editor@boa.test",
     name: "Image Editor",

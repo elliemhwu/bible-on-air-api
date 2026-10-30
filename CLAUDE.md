@@ -36,6 +36,7 @@ src/
 ├── magazines/        # 文章 API（列表、單篇、區塊、狀態流轉）
 ├── legacy-sync/      # 從舊 Google Site 同步缺少的日子與內容
 ├── uploads/          # 圖片上傳與儲存（UPLOAD_DIR）
+├── schedule/         # 進度安排（week_plans）、名單（team_rosters）、每日分派（assignments）、讀經筆記（writing_notes）、留話（article_comments）
 ├── database/         # data-source、migrations、seed
 └── bible/            # 聖經經文查詢服務
 ```
