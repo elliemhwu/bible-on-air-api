@@ -123,6 +123,16 @@ describe("parseMonthPage", () => {
       verseRanges: [],
       devotionalHtml: "<p>《以弗所書》傳統上認為是監獄書信。</p>",
       outlineHtml: "<p>一、在基督裡的救恩與教會(1:1-3:21)</p>",
+      outline: {
+        book: "弗",
+        sections: [
+          {
+            title: "在基督裡的救恩與教會",
+            range: { chapterStart: 1, verseStart: 1, chapterEnd: 3, verseEnd: 21 },
+            items: [],
+          },
+        ],
+      },
       memoryVerseRanges: [{ abbrZh: "弗", chapterStart: 1, verseStart: 10 }],
     });
   });

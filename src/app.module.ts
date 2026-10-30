@@ -12,6 +12,7 @@ import { LegacySyncModule } from "./legacy-sync/legacy-sync.module";
 import { MagazinesModule } from "./magazines/magazines.module";
 import { PublicationsModule } from "./publications/publications.module";
 import { PublishersModule } from "./publishers/publishers.module";
+import { ScheduleModule } from "./schedule/schedule.module";
 import { UploadsModule } from "./uploads/uploads.module";
 import { UsersModule } from "./users/users.module";
 
@@ -38,6 +39,7 @@ import { UsersModule } from "./users/users.module";
     MagazinesModule,
     UploadsModule,
     LegacySyncModule,
+    ScheduleModule,
   ],
   controllers: [AppController],
   providers: [AppService],

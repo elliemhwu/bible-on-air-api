@@ -14,6 +14,7 @@ export enum BlockType {
   VERSE = 'verse',
   QUESTIONS = 'questions',
   RICHTEXT = 'richtext',
+  OUTLINE = 'outline',
 }
 
 class BlockColumns {

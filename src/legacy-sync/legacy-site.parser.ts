@@ -1,7 +1,8 @@
 import { load } from "cheerio";
 import type { Element } from "domhandler";
 import { BIBLE_BOOKS } from "../bible/bible-books.constant";
-import { VerseRange } from "../blocks/block-content.types";
+import { OutlineBlockContent, VerseRange } from "../blocks/block-content.types";
+import { bookInTitle, parseOutlineLines } from "../blocks/outline";
 import { parseVerseRange } from "../bible/utils/verse-range-parser";
 
 /**
@@ -24,8 +25,10 @@ export interface LegacyArticle {
   questions: string[];
   /** daily: 今日靈修; overview: 書卷介紹 */
   devotionalHtml: string;
-  /** overview only: 本書大綱 */
+  /** overview only: 本書大綱 as written */
   outlineHtml: string;
+  /** overview only: 本書大綱 as sections and items; null when it does not read as an outline */
+  outline: OutlineBlockContent | null;
   memoryVerseRanges: VerseRange[];
   prayerHtml: string;
   imageUrl: string | null;
@@ -248,6 +251,11 @@ function parseSection(
     }
   }
 
+  const outline = kind === "overview" ? parseOutlineLines(parts.本書大綱, bookInTitle(title)) : null;
+  if (kind === "overview" && parts.本書大綱.length > 0 && !outline) {
+    warnings.push("本書大綱無法整理成大綱格式，請在後台手動輸入");
+  }
+
   if (kind === "daily" && parts.觀察與思想.length === 0) {
     warnings.push("找不到「觀察與思想」");
   }
@@ -264,6 +272,7 @@ function parseSection(
     questions: parts.觀察與思想,
     devotionalHtml: toHtml(devotional),
     outlineHtml: toHtml(parts.本書大綱),
+    outline,
     memoryVerseRanges,
     prayerHtml: toHtml(parts.回應與禱告),
     imageUrl,

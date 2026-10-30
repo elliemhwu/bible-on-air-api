@@ -4,7 +4,7 @@
 
 Bible On Air（BOA）是一個教會靈修平台，提供每日靈修內容瀏覽、聖經經文查詢、內容編輯與簽核流程，以及未來的社群功能。本倉庫為後端 REST API，供前端（Next.js）或行動裝置呼叫。
 
-BOA 目前是一個 Google Site，每天發布一篇靈修內容，並透過 LINE 官方帳號推播。這個專案的目標是將整個流程遷移到一個有條理、可擴充的自製平台。
+BOA 原本是一個 Google Site，每天發布一篇靈修內容，曾透過 LINE 官方帳號推播（因費用過高已停用，不再規劃 LINE 推播）。這個專案的目標是將整個流程遷移到一個有條理、可擴充的自製平台。
 
 ---
 
@@ -30,12 +30,14 @@ BOA 目前是一個 Google Site，每天發布一篇靈修內容，並透過 LIN
 src/
 ├── config/           # 資料庫與環境變數設定
 ├── auth/             # 登入、JWT 認證、守衛 (Guard)
-├── users/            # 使用者管理（CRUD、角色）
+├── users/            # 同工與權限（magazines/:uid/users：列表、邀請、調整小組/牧者、停用）；auth/invite/:token 設定密碼
+├── mail/             # 寄信（SMTP_*；未設定 SMTP_HOST 時只寫進 log），用於邀請信與重設密碼信
 ├── articles/         # 每日靈修文章內容
 ├── article-templates/        # 靈修內容模板與 block 定義
 ├── magazines/        # 文章 API（列表、單篇、區塊、狀態流轉）
 ├── legacy-sync/      # 從舊 Google Site 同步缺少的日子與內容
 ├── uploads/          # 圖片上傳與儲存（UPLOAD_DIR）
+├── schedule/         # 進度安排（week_plans）、名單（team_rosters）、每日分派（assignments）、讀經筆記（writing_notes）、留話（article_comments）
 ├── database/         # data-source、migrations、seed
 └── bible/            # 聖經經文查詢服務
 ```
@@ -48,8 +50,10 @@ src/
 
 ```
 User {
-  id, email, name, passwordHash, roles, createdAt, updatedAt
+  id, email, name, passwordHash, roles, teams, status, inviteToken, inviteExpiresAt, createdAt, updatedAt
   roles: enum[] [super_admin, manager, editor, reviewer, image_editor]
+  teams: { writer?, reviewer?, image?: "member" | "lead" }   // 小組與角色；roles 隨 teams 與牧者開關自動更新
+  status: "active" | "invited" | "disabled"                  // 邀請中、停用的帳號不能登入
 }
 ```
 
@@ -121,6 +125,7 @@ ArticleTemplate {
 | `verse`     | 輸入經文範圍，系統查找 | 顯示經文內容                 | 可依書卷查找     |
 | `questions` | 逐題輸入（陣列）       | 逐題顯示，未來旁邊有筆記入口 |                  |
 | `richtext`  | Rich text editor       | 排版後顯示                   | 禁止手動空格縮排 |
+| `outline`   | 大段（標題＋範圍）與段落（範圍＋說明） | 自動編號（一、二、…）顯示 | 書卷鳥瞰的「本書大綱」；`{ book, sections: [{ title, range, items: [{ range, text }] }] }`，範圍為該卷書內的 章:節 |
 
 ### Bible On Air 每日靈修 Template
 
@@ -144,7 +149,7 @@ blocks: [
 ```
 blocks: [
   { order: 1, type: richtext,  subheading: null,        label: "書卷介紹" },
-  { order: 2, type: richtext,  subheading: "本書大綱",   label: "書卷大綱" },
+  { order: 2, type: outline,   subheading: "本書大綱",   label: "書卷大綱" },
   { order: 3, type: verse,     subheading: "背誦經文",   label: "背誦金句" },
   { order: 4, type: richtext,  subheading: "回應與禱告", label: "回應與禱告" },
 ]
@@ -284,7 +289,6 @@ manager  → 按下發布（visible）
 
 ### 暫緩到 Stage 2+
 
-- LINE 自動推播
 - Manager 進度規劃 + 排程分配
 - Article Template 管理後台
 - 各帳號個人化 dashboard
@@ -312,7 +316,7 @@ yarn start:dev
 # 建置
 yarn build
 
-# 執行測試
+# 執行測試（CI：.github/workflows/ci.yml 也會在空資料庫跑完所有 migration，並檢查 entity 變更是否都有 migration）
 yarn test
 yarn test:e2e
 

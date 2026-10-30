@@ -315,6 +315,8 @@ export class MagazineArticlesService {
         content = { ranges: [] };
       } else if (def.type === BlockType.QUESTIONS) {
         content = { items: [] };
+      } else if (def.type === BlockType.OUTLINE) {
+        content = { book: "", sections: [] };
       } else {
         content = { html: "" };
       }
@@ -392,8 +394,9 @@ export class MagazineArticlesService {
 
     const urlByDate = new Map(items.map((i) => [i.date, i.imageUrl]));
     for (const article of articles) {
-      article.coverImageUrl =
-        urlByDate.get(article.date) ?? article.coverImageUrl;
+      if (urlByDate.has(article.date)) {
+        article.coverImageUrl = urlByDate.get(article.date) ?? null;
+      }
     }
 
     return (await this.articleRepo.save(articles)).map(withStatus);
