@@ -44,10 +44,9 @@ export class ScheduleController {
   constructor(private readonly service: ScheduleService) {}
 
   @Get("staff")
-  @Roles(...MANAGER_AND_ABOVE)
-  @ApiOperation({ summary: "All staff accounts (id, name, roles), for building rosters" })
-  findStaff() {
-    return this.service.findStaff();
+  @ApiOperation({ summary: "Active and invited staff (id, name, roles, teams), for building rosters (managers and team leads)" })
+  findStaff(@CurrentUser() user: JwtPayload) {
+    return this.service.findStaff(user.sub);
   }
 
   @Get("plans")
@@ -74,14 +73,14 @@ export class ScheduleController {
   }
 
   @Put("rosters/:team")
-  @Roles(...MANAGER_AND_ABOVE)
-  @ApiOperation({ summary: "Replace a team's rotation order" })
+  @ApiOperation({ summary: "Replace a team's rotation order (managers, or that team's lead)" })
   updateRoster(
     @Param("uid") uid: string,
     @Param("team", new ParseEnumPipe(Team)) team: Team,
     @Body() dto: UpdateRosterDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.service.updateRoster(uid, team, dto.userIds);
+    return this.service.updateRoster(uid, user.sub, team, dto.userIds);
   }
 
   @Get("assignments")
@@ -91,10 +90,9 @@ export class ScheduleController {
   }
 
   @Put("assignments")
-  @Roles(...MANAGER_AND_ABOVE)
-  @ApiOperation({ summary: "Set (or clear, with userId null) the assignment of each day and team" })
-  saveAssignments(@Param("uid") uid: string, @Body() dto: SaveAssignmentsDto) {
-    return this.service.saveAssignments(uid, dto.items);
+  @ApiOperation({ summary: "Set (or clear, with userId null) the assignment of each day and team (managers, or the teams' lead)" })
+  saveAssignments(@Param("uid") uid: string, @Body() dto: SaveAssignmentsDto, @CurrentUser() user: JwtPayload) {
+    return this.service.saveAssignments(uid, user.sub, dto.items);
   }
 
   @Get("notes/:date")

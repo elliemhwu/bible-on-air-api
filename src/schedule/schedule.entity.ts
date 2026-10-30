@@ -9,14 +9,9 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 import { Article } from "../articles/article.entity";
-import { User } from "../users/user.entity";
+import { Team, User } from "../users/user.entity";
 
-/** The three teams that take turns: 寫作、校稿、圖片 */
-export enum Team {
-  WRITER = "writer",
-  REVIEWER = "reviewer",
-  IMAGE = "image",
-}
+export { Team };
 
 /** One weekday (Mon–Sat) of a week plan */
 export interface PlanDay {

@@ -30,7 +30,7 @@ BOA 目前是一個 Google Site，每天發布一篇靈修內容，並透過 LIN
 src/
 ├── config/           # 資料庫與環境變數設定
 ├── auth/             # 登入、JWT 認證、守衛 (Guard)
-├── users/            # 使用者管理（CRUD、角色）
+├── users/            # 同工與權限（magazines/:uid/users：列表、邀請、調整小組/牧者、停用）；auth/invite/:token 設定密碼
 ├── articles/         # 每日靈修文章內容
 ├── article-templates/        # 靈修內容模板與 block 定義
 ├── magazines/        # 文章 API（列表、單篇、區塊、狀態流轉）
@@ -49,8 +49,10 @@ src/
 
 ```
 User {
-  id, email, name, passwordHash, roles, createdAt, updatedAt
+  id, email, name, passwordHash, roles, teams, status, inviteToken, inviteExpiresAt, createdAt, updatedAt
   roles: enum[] [super_admin, manager, editor, reviewer, image_editor]
+  teams: { writer?, reviewer?, image?: "member" | "lead" }   // 小組與角色；roles 隨 teams 與牧者開關自動更新
+  status: "active" | "invited" | "disabled"                  // 邀請中、停用的帳號不能登入
 }
 ```
 

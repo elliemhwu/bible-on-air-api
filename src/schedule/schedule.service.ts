@@ -1,7 +1,8 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Between, In, Repository } from "typeorm";
-import { User } from "../users/user.entity";
+import { Between, In, Not, Repository } from "typeorm";
+import { User, UserStatus } from "../users/user.entity";
+import { isAdmin, leadTeams } from "../users/users.service";
 import {
   AssignmentItemDto,
   CreateNoteDto,
@@ -30,10 +31,25 @@ export class ScheduleService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
   ) {}
 
-  /** Everyone with a studio role, for picking roster members */
-  async findStaff() {
-    const users = await this.userRepo.find({ order: { name: "ASC" } });
-    return users.map(({ id, name, roles }) => ({ id, name, roles }));
+  /** Managers may schedule every team; a team lead only the teams they lead */
+  private async assertCanSchedule(actorId: string, teams: Team[]) {
+    const actor = await this.userRepo.findOneBy({ id: actorId });
+    if (!actor) throw new ForbiddenException();
+    if (isAdmin(actor)) return;
+    const led = leadTeams(actor);
+    if (teams.length === 0 ? led.length === 0 : teams.some((t) => !led.includes(t))) {
+      throw new ForbiddenException("只能排定你負責的小組");
+    }
+  }
+
+  /** Everyone who can serve (not disabled), for picking roster members */
+  async findStaff(actorId: string) {
+    await this.assertCanSchedule(actorId, []);
+    const users = await this.userRepo.find({
+      where: { status: Not(UserStatus.DISABLED) },
+      order: { name: "ASC" },
+    });
+    return users.map(({ id, name, roles, teams }) => ({ id, name, roles, teams: teams ?? {} }));
   }
 
   // ── Week plans ─────────────────────────────────────────────────────────
@@ -69,13 +85,14 @@ export class ScheduleService {
       const roster = rosters.find((r) => r.team === team);
       const members = (roster?.userIds ?? [])
         .map((id) => byId.get(id))
-        .filter((u): u is User => !!u)
+        .filter((u): u is User => !!u && u.status !== UserStatus.DISABLED)
         .map((u) => ({ id: u.id, name: u.name }));
       return { team, members };
     });
   }
 
-  async updateRoster(uid: string, team: Team, userIds: string[]) {
+  async updateRoster(uid: string, actorId: string, team: Team, userIds: string[]) {
+    await this.assertCanSchedule(actorId, [team]);
     await this.rosterRepo.save(this.rosterRepo.create({ publicationUid: uid, team, userIds }));
     return (await this.findRosters(uid)).find((r) => r.team === team);
   }
@@ -91,7 +108,8 @@ export class ScheduleService {
     return rows.map(({ date, team, userId, user }) => ({ date, team, userId, userName: user.name }));
   }
 
-  async saveAssignments(uid: string, items: AssignmentItemDto[]) {
+  async saveAssignments(uid: string, actorId: string, items: AssignmentItemDto[]) {
+    await this.assertCanSchedule(actorId, [...new Set(items.map((i) => i.team))]);
     await this.assignmentRepo.manager.transaction(async (em) => {
       const repo = em.getRepository(Assignment);
       const cleared = items.filter((i) => !i.userId);

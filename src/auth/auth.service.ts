@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { User, UserStatus } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
 import { JwtPayload } from './jwt.strategy';
 
@@ -18,9 +19,25 @@ export class AuthService {
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
+    if (!isMatch || user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    return this.session(user);
+  }
+
+  /** Who an invitation is for, so the page can greet them */
+  async inviteInfo(token: string) {
+    const user = await this.usersService.findByInvite(token);
+    return { name: user.name, email: user.email };
+  }
+
+  /** Sets the password from an invitation and signs the person in */
+  async acceptInvite(token: string, password: string) {
+    return this.session(await this.usersService.acceptInvite(token, password));
+  }
+
+  private session(user: User) {
 
     const payload: JwtPayload = {
       sub: user.id,
@@ -35,6 +52,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         roles: user.roles,
+        teams: user.teams ?? {},
       },
     };
   }
@@ -49,6 +67,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       roles: user.roles,
+      teams: user.teams ?? {},
     };
   }
 }

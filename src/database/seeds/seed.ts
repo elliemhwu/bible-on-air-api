@@ -7,29 +7,30 @@ import {
   PublicationType,
 } from "../../publications/publication.entity";
 import { Publisher } from "../../publishers/publisher.entity";
-import { User, UserRole } from "../../users/user.entity";
+import { TeamRoles, User, UserRole } from "../../users/user.entity";
 import dataSource from "../data-source";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const DEV_PASSWORD = "test1234";
 
 // Development only: one test account per role, all with DEV_PASSWORD
-const DEV_USERS: { email: string; name: string; roles: UserRole[] }[] = [
+const DEV_USERS: { email: string; name: string; roles: UserRole[]; teams?: TeamRoles }[] = [
   {
     email: "super-admin@boa.test",
     name: "Super Admin",
     roles: [UserRole.SUPER_ADMIN],
   },
   { email: "manager@boa.test", name: "Manager", roles: [UserRole.MANAGER] },
-  { email: "editor@boa.test", name: "Editor", roles: [UserRole.EDITOR] },
-  { email: "editor2@boa.test", name: "Editor 2", roles: [UserRole.EDITOR] },
-  { email: "editor3@boa.test", name: "Editor 3", roles: [UserRole.EDITOR] },
-  { email: "reviewer@boa.test", name: "Reviewer", roles: [UserRole.REVIEWER] },
-  { email: "reviewer2@boa.test", name: "Reviewer 2", roles: [UserRole.REVIEWER] },
+  { email: "editor@boa.test", name: "Editor", roles: [UserRole.EDITOR], teams: { writer: "lead" } },
+  { email: "editor2@boa.test", name: "Editor 2", roles: [UserRole.EDITOR], teams: { writer: "member" } },
+  { email: "editor3@boa.test", name: "Editor 3", roles: [UserRole.EDITOR], teams: { writer: "member" } },
+  { email: "reviewer@boa.test", name: "Reviewer", roles: [UserRole.REVIEWER], teams: { reviewer: "member" } },
+  { email: "reviewer2@boa.test", name: "Reviewer 2", roles: [UserRole.REVIEWER], teams: { reviewer: "member" } },
   {
     email: "image-editor@boa.test",
     name: "Image Editor",
     roles: [UserRole.IMAGE_EDITOR],
+    teams: { image: "lead" },
   },
 ];
 
@@ -64,7 +65,7 @@ async function seed() {
     const passwordHash = await bcrypt.hash(DEV_PASSWORD, 10);
     for (const u of DEV_USERS) {
       await userRepo.upsert(
-        { ...u, passwordHash },
+        { teams: {}, ...u, passwordHash },
         { conflictPaths: ["email"], skipUpdateIfNoValuesChanged: false },
       );
       console.log(`✓ User: ${u.email}`);
