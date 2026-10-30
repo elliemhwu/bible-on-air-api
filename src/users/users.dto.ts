@@ -72,9 +72,15 @@ export class UpdateUserDto {
   status?: UserStatus.ACTIVE | UserStatus.DISABLED;
 }
 
-export class AcceptInviteDto {
+/** A new password, from an invitation or a reset link */
+export class SetPasswordDto {
   @IsString()
   @MinLength(8)
   @MaxLength(100)
   password: string;
+}
+
+export class ForgotPasswordDto {
+  @IsEmail()
+  email: string;
 }

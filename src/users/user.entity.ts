@@ -71,6 +71,13 @@ class UserColumns {
   @Column({ type: 'timestamptz', nullable: true })
   inviteExpiresAt: Date | null;
 
+  /** Single-use token from a "forgot password" email */
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  resetToken: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  resetExpiresAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

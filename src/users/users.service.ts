@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { Repository } from 'typeorm';
+import { linkMail, MailService } from '../mail/mail.service';
 import { TeamRoster } from '../schedule/schedule.entity';
 import {
   Team,
@@ -21,6 +22,7 @@ import {
 import { InviteUserDto, TeamRolesDto, UpdateUserDto } from './users.dto';
 
 const INVITE_DAYS = 14;
+const RESET_MINUTES = 60;
 const ADMIN_ROLES = [UserRole.MANAGER, UserRole.SUPER_ADMIN];
 
 export const isAdmin = (user: Pick<User, 'roles'>) =>
@@ -57,6 +59,7 @@ export class UsersService {
     private readonly repo: Repository<User>,
     @InjectRepository(TeamRoster)
     private readonly rosterRepo: Repository<TeamRoster>,
+    private readonly mail: MailService,
   ) {}
 
   findById(id: string): Promise<User | null> {
@@ -132,7 +135,29 @@ export class UsersService {
     };
   }
 
-  /** Creates an invited account; the caller shares the returned token as a link */
+  /**
+   * Emails the invitation link. When it could not be sent (no SMTP), the
+   * token is returned so the inviter can pass the link on themselves.
+   */
+  private async sendInvite(user: User, inviter: User) {
+    const url = `${this.mail.webBaseUrl}/invite/${user.inviteToken}`;
+    const emailed = await this.mail.send(
+      linkMail(
+        user.email,
+        `${inviter.name} 邀請你加入 Bible On Air 後台`,
+        [
+          `${user.name} 平安：`,
+          `${inviter.name} 邀請你一起服事 Bible On Air 的每日靈修。`,
+          `請在 ${INVITE_DAYS} 天內點下面的按鈕，設定密碼後就能登入後台。`,
+        ],
+        '接受邀請',
+        url,
+      ),
+    );
+    return { user: publicUser(user), emailed, inviteToken: emailed ? null : user.inviteToken };
+  }
+
+  /** Creates an invited account and emails them the invitation */
   async invite(uid: string, actorId: string, dto: InviteUserDto) {
     const actor = await this.actor(actorId);
     const email = dto.email.trim().toLowerCase();
@@ -154,7 +179,7 @@ export class UsersService {
       }),
     );
     await this.syncRosters(uid, user.id, {}, teams);
-    return { user: publicUser(user), inviteToken: user.inviteToken };
+    return this.sendInvite(user, actor);
   }
 
   async update(uid: string, actorId: string, id: string, dto: UpdateUserDto) {
@@ -181,7 +206,7 @@ export class UsersService {
     return publicUser(target);
   }
 
-  /** A fresh invitation link for an account that has not joined yet */
+  /** Emails a fresh invitation to an account that has not joined yet */
   async reinvite(actorId: string, id: string) {
     const actor = await this.actor(actorId);
     const target = await this.findById(id);
@@ -191,7 +216,7 @@ export class UsersService {
     if (!isAdmin(actor) && !shared) throw new ForbiddenException();
     Object.assign(target, this.newInvite());
     await this.repo.save(target);
-    return { user: publicUser(target), inviteToken: target.inviteToken };
+    return this.sendInvite(target, actor);
   }
 
   async findByInvite(token: string): Promise<User> {
@@ -208,6 +233,47 @@ export class UsersService {
     user.status = UserStatus.ACTIVE;
     user.inviteToken = null;
     user.inviteExpiresAt = null;
+    return this.repo.save(user);
+  }
+
+  /**
+   * Emails a reset link to an active account. Says nothing about whether
+   * the address has an account, so it cannot be used to look people up.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.findByEmail(email.trim().toLowerCase());
+    if (!user || user.status !== UserStatus.ACTIVE) return;
+    user.resetToken = randomBytes(24).toString('hex');
+    user.resetExpiresAt = new Date(Date.now() + RESET_MINUTES * 60_000);
+    await this.repo.save(user);
+    await this.mail.send(
+      linkMail(
+        user.email,
+        '重設 Bible On Air 密碼',
+        [
+          `${user.name} 平安：`,
+          '我們收到重設密碼的要求。請在一小時內點下面的按鈕設定新密碼。',
+          '如果不是你提出的，可以忽略這封信，密碼不會改變。',
+        ],
+        '重設密碼',
+        `${this.mail.webBaseUrl}/reset/${user.resetToken}`,
+      ),
+    );
+  }
+
+  async findByReset(token: string): Promise<User> {
+    const user = await this.repo.findOneBy({ resetToken: token });
+    if (!user || user.status !== UserStatus.ACTIVE || !user.resetExpiresAt || user.resetExpiresAt < new Date()) {
+      throw new NotFoundException('重設連結無效或已過期');
+    }
+    return user;
+  }
+
+  async resetPassword(token: string, password: string): Promise<User> {
+    const user = await this.findByReset(token);
+    user.passwordHash = await bcrypt.hash(password, 10);
+    user.resetToken = null;
+    user.resetExpiresAt = null;
     return this.repo.save(user);
   }
 }

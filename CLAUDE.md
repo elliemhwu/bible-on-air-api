@@ -4,7 +4,7 @@
 
 Bible On Air（BOA）是一個教會靈修平台，提供每日靈修內容瀏覽、聖經經文查詢、內容編輯與簽核流程，以及未來的社群功能。本倉庫為後端 REST API，供前端（Next.js）或行動裝置呼叫。
 
-BOA 目前是一個 Google Site，每天發布一篇靈修內容，並透過 LINE 官方帳號推播。這個專案的目標是將整個流程遷移到一個有條理、可擴充的自製平台。
+BOA 原本是一個 Google Site，每天發布一篇靈修內容，曾透過 LINE 官方帳號推播（因費用過高已停用，不再規劃 LINE 推播）。這個專案的目標是將整個流程遷移到一個有條理、可擴充的自製平台。
 
 ---
 
@@ -31,6 +31,7 @@ src/
 ├── config/           # 資料庫與環境變數設定
 ├── auth/             # 登入、JWT 認證、守衛 (Guard)
 ├── users/            # 同工與權限（magazines/:uid/users：列表、邀請、調整小組/牧者、停用）；auth/invite/:token 設定密碼
+├── mail/             # 寄信（SMTP_*；未設定 SMTP_HOST 時只寫進 log），用於邀請信與重設密碼信
 ├── articles/         # 每日靈修文章內容
 ├── article-templates/        # 靈修內容模板與 block 定義
 ├── magazines/        # 文章 API（列表、單篇、區塊、狀態流轉）
@@ -287,7 +288,6 @@ manager  → 按下發布（visible）
 
 ### 暫緩到 Stage 2+
 
-- LINE 自動推播
 - Manager 進度規劃 + 排程分配
 - Article Template 管理後台
 - 各帳號個人化 dashboard
@@ -315,7 +315,7 @@ yarn start:dev
 # 建置
 yarn build
 
-# 執行測試
+# 執行測試（CI：.github/workflows/ci.yml 也會在空資料庫跑完所有 migration，並檢查 entity 變更是否都有 migration）
 yarn test
 yarn test:e2e
 

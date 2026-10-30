@@ -37,6 +37,20 @@ export class AuthService {
     return this.session(await this.usersService.acceptInvite(token, password));
   }
 
+  forgotPassword(email: string): Promise<void> {
+    return this.usersService.requestPasswordReset(email);
+  }
+
+  async resetInfo(token: string) {
+    const user = await this.usersService.findByReset(token);
+    return { email: user.email };
+  }
+
+  /** Sets the new password and signs the person in */
+  async resetPassword(token: string, password: string) {
+    return this.session(await this.usersService.resetPassword(token, password));
+  }
+
   private session(user: User) {
 
     const payload: JwtPayload = {
