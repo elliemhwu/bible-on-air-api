@@ -125,6 +125,7 @@ ArticleTemplate {
 | `verse`     | 輸入經文範圍，系統查找 | 顯示經文內容                 | 可依書卷查找     |
 | `questions` | 逐題輸入（陣列）       | 逐題顯示，未來旁邊有筆記入口 |                  |
 | `richtext`  | Rich text editor       | 排版後顯示                   | 禁止手動空格縮排 |
+| `outline`   | 大段（標題＋範圍）與段落（範圍＋說明） | 自動編號（一、二、…）顯示 | 書卷鳥瞰的「本書大綱」；`{ book, sections: [{ title, range, items: [{ range, text }] }] }`，範圍為該卷書內的 章:節 |
 
 ### Bible On Air 每日靈修 Template
 
@@ -148,7 +149,7 @@ blocks: [
 ```
 blocks: [
   { order: 1, type: richtext,  subheading: null,        label: "書卷介紹" },
-  { order: 2, type: richtext,  subheading: "本書大綱",   label: "書卷大綱" },
+  { order: 2, type: outline,   subheading: "本書大綱",   label: "書卷大綱" },
   { order: 3, type: verse,     subheading: "背誦經文",   label: "背誦金句" },
   { order: 4, type: richtext,  subheading: "回應與禱告", label: "回應與禱告" },
 ]

@@ -156,7 +156,7 @@ async function seed() {
         },
         {
           order: 2,
-          type: BlockType.RICHTEXT,
+          type: BlockType.OUTLINE,
           subheading: "本書大綱",
           label: "書卷大綱",
           defaultContent: null,

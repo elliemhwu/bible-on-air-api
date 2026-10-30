@@ -315,6 +315,8 @@ export class MagazineArticlesService {
         content = { ranges: [] };
       } else if (def.type === BlockType.QUESTIONS) {
         content = { items: [] };
+      } else if (def.type === BlockType.OUTLINE) {
+        content = { book: "", sections: [] };
       } else {
         content = { html: "" };
       }
