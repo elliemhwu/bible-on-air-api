@@ -235,4 +235,24 @@ describe('UsersService', () => {
       await expect(service.findByReset('r')).rejects.toThrow(NotFoundException);
     });
   });
+
+  describe('own profile', () => {
+    it('trims the new name and sets or clears the picture', async () => {
+      const saved = await service.updateProfile('u-member', { name: '  新名字 ', avatarUrl: '/uploads/a.png' });
+      expect(saved).toMatchObject({ name: '新名字', avatarUrl: '/uploads/a.png' });
+      expect((await service.updateProfile('u-member', { avatarUrl: null })).avatarUrl).toBeNull();
+    });
+
+    it('rejects a blank name', async () => {
+      await expect(service.updateProfile('u-member', { name: '  ' })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('changes the password only with the current one', async () => {
+      users = users.map((u) => (u.id === 'u-member' ? { ...u, passwordHash: bcrypt.hashSync('old-password', 4) } : u));
+      await expect(service.changePassword('u-member', 'wrong', 'new-password')).rejects.toBeInstanceOf(BadRequestException);
+      await service.changePassword('u-member', 'old-password', 'new-password');
+      const hash = users.find((u) => u.id === 'u-member')!.passwordHash;
+      expect(bcrypt.compareSync('new-password', hash)).toBe(true);
+    });
+  });
 });

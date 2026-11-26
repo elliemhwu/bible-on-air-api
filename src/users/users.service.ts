@@ -269,6 +269,30 @@ export class UsersService {
     return user;
   }
 
+  /** The signed-in person changes their own name or picture */
+  async updateProfile(id: string, changes: { name?: string; avatarUrl?: string | null }): Promise<User> {
+    const user = await this.repo.findOneBy({ id });
+    if (!user) throw new NotFoundException('User not found');
+    if (changes.name !== undefined) {
+      const name = changes.name.trim();
+      if (!name) throw new BadRequestException('Name is required');
+      user.name = name;
+    }
+    if (changes.avatarUrl !== undefined) user.avatarUrl = changes.avatarUrl;
+    return this.repo.save(user);
+  }
+
+  /** Changing a password needs the current one */
+  async changePassword(id: string, currentPassword: string, password: string): Promise<void> {
+    const user = await this.repo.findOneBy({ id });
+    if (!user) throw new NotFoundException('User not found');
+    if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      throw new BadRequestException('Current password is wrong');
+    }
+    user.passwordHash = await bcrypt.hash(password, 10);
+    await this.repo.save(user);
+  }
+
   async resetPassword(token: string, password: string): Promise<User> {
     const user = await this.findByReset(token);
     user.passwordHash = await bcrypt.hash(password, 10);

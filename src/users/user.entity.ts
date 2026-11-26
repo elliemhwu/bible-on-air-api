@@ -54,6 +54,10 @@ class UserColumns {
   @Column({ type: 'varchar', length: 255 })
   passwordHash: string;
 
+  /** Profile picture, an /uploads/... path */
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  avatarUrl: string | null;
+
   @Column({ type: 'simple-array' })
   roles: UserRole[];
 

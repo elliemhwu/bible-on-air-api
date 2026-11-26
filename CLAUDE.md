@@ -29,7 +29,7 @@ BOA 原本是一個 Google Site，每天發布一篇靈修內容，曾透過 LIN
 ```
 src/
 ├── config/           # 資料庫與環境變數設定
-├── auth/             # 登入、JWT 認證、守衛 (Guard)
+├── auth/             # 登入、JWT 認證、守衛 (Guard)；auth/me（GET 自己、PATCH 改名字與 avatarUrl）、POST auth/me/password（需目前密碼，錯誤回 400）
 ├── users/            # 同工與權限（magazines/:uid/users：列表、邀請、調整小組/牧者、停用）；auth/invite/:token 設定密碼
 ├── mail/             # 寄信（SMTP_*；未設定 SMTP_HOST 時只寫進 log），用於邀請信與重設密碼信
 ├── articles/         # 每日靈修文章內容

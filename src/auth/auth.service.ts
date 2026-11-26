@@ -52,7 +52,6 @@ export class AuthService {
   }
 
   private session(user: User) {
-
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
@@ -61,13 +60,19 @@ export class AuthService {
 
     return {
       accessToken: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        roles: user.roles,
-        teams: user.teams ?? {},
-      },
+      user: this.me(user),
+    };
+  }
+
+  /** The signed-in person as the studio sees them */
+  private me(user: User) {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatarUrl: user.avatarUrl ?? null,
+      roles: user.roles,
+      teams: user.teams ?? {},
     };
   }
 
@@ -76,12 +81,14 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      roles: user.roles,
-      teams: user.teams ?? {},
-    };
+    return this.me(user);
+  }
+
+  async updateMe(userId: string, changes: { name?: string; avatarUrl?: string | null }) {
+    return this.me(await this.usersService.updateProfile(userId, changes));
+  }
+
+  changePassword(userId: string, currentPassword: string, password: string): Promise<void> {
+    return this.usersService.changePassword(userId, currentPassword, password);
   }
 }

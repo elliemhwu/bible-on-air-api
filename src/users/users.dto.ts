@@ -5,6 +5,7 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   MinLength,
   ValidateIf,
@@ -74,6 +75,33 @@ export class UpdateUserDto {
 
 /** A new password, from an invitation or a reset link */
 export class SetPasswordDto {
+  @IsString()
+  @MinLength(8)
+  @MaxLength(100)
+  password: string;
+}
+
+/** The signed-in person's own name and picture */
+export class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  name?: string;
+
+  /** An /uploads/... path; null removes the picture */
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  @Matches(/^\/uploads\/[\w.-]+$/)
+  avatarUrl?: string | null;
+}
+
+export class ChangePasswordDto {
+  @IsString()
+  @MaxLength(100)
+  currentPassword: string;
+
   @IsString()
   @MinLength(8)
   @MaxLength(100)
