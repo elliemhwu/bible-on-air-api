@@ -32,8 +32,14 @@ describe("ScheduleService", () => {
     find: jest.fn(async () => []),
     manager: { transaction: jest.fn(async (cb) => cb({ getRepository: () => tx })) },
   };
+  const planRepo = {
+    findOneBy: jest.fn(async () => ({ note: "春節連假" })),
+    findOneByOrFail: jest.fn(async () => ({})),
+    create: jest.fn((p) => p),
+    save: jest.fn(async (p) => p),
+  };
   const service = new ScheduleService(
-    {} as any,
+    planRepo as any,
     rosterRepo as any,
     assignmentRepo as any,
     {} as any,
@@ -42,6 +48,22 @@ describe("ScheduleService", () => {
   );
 
   beforeEach(() => jest.clearAllMocks());
+
+  describe("plans", () => {
+    const days = Array.from({ length: 6 }, () => ({ ref: "" }));
+
+    it("keeps the saved note when a save leaves it out", async () => {
+      await service.upsertPlan(UID, "2026-02-16", { sundayTheme: "主題", days });
+      expect(planRepo.save).toHaveBeenCalledWith(expect.objectContaining({ note: "春節連假" }));
+    });
+
+    it("sets or clears the note when given", async () => {
+      await service.upsertPlan(UID, "2026-02-16", { note: " 宣教主日 ", days });
+      expect(planRepo.save).toHaveBeenLastCalledWith(expect.objectContaining({ note: "宣教主日" }));
+      await service.upsertPlan(UID, "2026-02-16", { note: null, days });
+      expect(planRepo.save).toHaveBeenLastCalledWith(expect.objectContaining({ note: null }));
+    });
+  });
 
   describe("rosters", () => {
     it("lists members in rota order, leaving out disabled and deleted accounts", async () => {

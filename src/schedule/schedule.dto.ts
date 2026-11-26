@@ -51,6 +51,13 @@ export class UpsertWeekPlanDto {
   @MaxLength(100)
   sundayPassage?: string | null;
 
+  /** 節期與備註; left out, the saved note stays */
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  @MaxLength(200)
+  note?: string | null;
+
   @IsArray()
   @ArrayMinSize(6)
   @ArrayMaxSize(6)

@@ -62,12 +62,17 @@ export class ScheduleService {
   }
 
   async upsertPlan(uid: string, weekStart: string, dto: UpsertWeekPlanDto): Promise<WeekPlan> {
+    const note =
+      dto.note !== undefined
+        ? dto.note?.trim() || null
+        : ((await this.planRepo.findOneBy({ publicationUid: uid, weekStart }))?.note ?? null);
     await this.planRepo.save(
       this.planRepo.create({
         publicationUid: uid,
         weekStart,
         sundayTheme: dto.sundayTheme ?? null,
         sundayPassage: dto.sundayPassage ?? null,
+        note,
         days: dto.days.map((d) => ({ ref: d.ref.trim(), ...(d.overview && { overview: true }) })),
       }),
     );

@@ -37,7 +37,7 @@ src/
 ├── magazines/        # 文章 API（列表、單篇、區塊、狀態流轉）
 ├── legacy-sync/      # 從舊 Google Site 同步缺少的日子與內容
 ├── uploads/          # 圖片上傳與儲存（UPLOAD_DIR）
-├── schedule/         # 進度安排（week_plans）、名單（team_rosters）、每日分派（assignments）、讀經筆記（writing_notes）、留話（article_comments）
+├── schedule/         # 進度安排（week_plans：主日主題、主日經文、節期與備註 note、週一到週六經文；儲存時沒帶 note 會保留原值）、名單（team_rosters）、每日分派（assignments）、讀經筆記（writing_notes）、留話（article_comments）
 ├── database/         # data-source、migrations、seed
 └── bible/            # 聖經經文查詢服務
 ```
@@ -186,6 +186,9 @@ BibleService 對外只暴露 `getVerses(range: VerseRange)` 介面：
 1. 先查 DB 快取
 2. 快取沒有才打外部 API（目前使用信望愛 FHL API，未來可替換）
 3. API 若只支援逐節查詢，用 BIBLE_BOOKS 常數展開範圍
+
+`GET /bible/verses?ref=` 可以一次查好幾段（`parseVerseRanges`）：以 `、，,；;/`（全形半形皆可）分開，
+沒寫書卷的段落沿用前一段（`羅3:19-24、4:1-8`），只寫章表示整章（`賽61`），回傳每段各一個 range。
 
 ### BIBLE_BOOKS 常數
 

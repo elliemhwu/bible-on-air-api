@@ -36,6 +36,10 @@ export class WeekPlan {
   @Column({ type: "varchar", length: 100, nullable: true })
   sundayPassage: string | null;
 
+  /** 節期與備註, e.g. 春節連假, 宣教主日 */
+  @Column({ type: "varchar", length: 200, nullable: true })
+  note: string | null;
+
   /** Always six entries, Monday to Saturday */
   @Column({ type: "jsonb", default: () => "'[]'" })
   days: PlanDay[];

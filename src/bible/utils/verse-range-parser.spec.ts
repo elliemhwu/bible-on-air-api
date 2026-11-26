@@ -1,4 +1,4 @@
-import { parseVerseRange } from './verse-range-parser';
+import { parseVerseRange, parseVerseRanges } from './verse-range-parser';
 
 describe('parseVerseRange', () => {
   // ── 書名格式 ──────────────────────────────────────────
@@ -79,5 +79,32 @@ describe('parseVerseRange', () => {
     it('end chapter < start chapter → throws', () => {
       expect(() => parseVerseRange('出14:1-13:2')).toThrow();
     });
+  });
+});
+
+describe('parseVerseRanges', () => {
+  const short = (input: string) =>
+    parseVerseRanges(input).map((r) => `${r.abbrZh}${r.chapterStart}:${r.verseStart}-${r.chapterEnd ?? ''}${r.chapterEnd ? ':' : ''}${r.verseEnd ?? ''}`);
+
+  it('splits on any separator, full- or half-width', () => {
+    for (const input of ['申6:1-5；利19:9-18', '申6:1-5;利19:9-18', '申6:1-5、利19:9-18', '申6:1-5，利19:9-18', '申6:1-5, 利19:9-18']) {
+      expect(short(input)).toEqual(['申6:1-5', '利19:9-18']);
+    }
+  });
+
+  it('continues the book, reads whole chapters and full-width digits', () => {
+    expect(short('羅3:19-24、4:1-8')).toEqual(['羅3:19-24', '羅4:1-8']);
+    expect(short('路4:15-21、賽61')).toEqual(['路4:15-21', '賽61:1-11']);
+    expect(short('約１：１－３４')).toEqual(['約1:1-34']);
+    expect(short('加1:13-2:14')).toEqual(['加1:13-2:14']);
+  });
+
+  it('keeps single references unchanged', () => {
+    expect(parseVerseRanges('出埃及記 13:21-14:2')).toEqual([parseVerseRange('出埃及記 13:21-14:2')]);
+  });
+
+  it('rejects a piece it cannot read', () => {
+    expect(() => parseVerseRanges('4:1-8')).toThrow();
+    expect(() => parseVerseRanges('申6:1-5；宣教主日')).toThrow();
   });
 });
