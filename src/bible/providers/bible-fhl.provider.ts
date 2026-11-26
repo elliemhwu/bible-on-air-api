@@ -24,7 +24,8 @@ const FHL_BASE_URL = 'https://bible.fhl.net/json/qb.php';
  */
 @Injectable()
 export class BibleFhlProvider implements BibleProvider {
-  readonly version = 'nstrunv';
+  // FHL dropped 'nstrunv' (新標點和合本); 'unv' is the FHL 和合本.
+  readonly version = 'unv';
 
   async getVerses(range: VerseRange): Promise<Verse[]> {
     const refs = expandVerseRange(range);

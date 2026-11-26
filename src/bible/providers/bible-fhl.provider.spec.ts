@@ -6,7 +6,7 @@ import { VerseRange } from '../bible.types';
 function fhlResponse(
   records: Array<{ chap: number; sec: number; bible_text: string }>,
   status = 'success',
-  version = 'nstrunv',
+  version = 'unv',
 ) {
   return { status, version, record_count: records.length, record: records };
 }
@@ -83,13 +83,13 @@ describe('BibleFhlProvider', () => {
       expect(fetchSpy.mock.calls[1][0]).toContain('sec=1-2');
     });
 
-    it('includes gb=0 (Traditional Chinese) and version=nstrunv', async () => {
+    it('includes gb=0 (Traditional Chinese) and version=unv', async () => {
       mockFetch([{ chap: 1, sec: 1, bible_text: 'text' }]);
       await provider.getVerses({ abbrZh: '創', chapterStart: 1, verseStart: 1 });
 
       const url = fetchSpy.mock.calls[0][0] as string;
       expect(url).toContain('gb=0');
-      expect(url).toContain('version=nstrunv');
+      expect(url).toContain('version=unv');
     });
   });
 
@@ -101,7 +101,7 @@ describe('BibleFhlProvider', () => {
       const result = await provider.getVerses({ abbrZh: '出', chapterStart: 13, verseStart: 19 });
 
       expect(result).toEqual([
-        { abbrZh: '出', chapter: 13, verse: 19, text: '摩西把約瑟的骸骨一同帶去', version: 'nstrunv' },
+        { abbrZh: '出', chapter: 13, verse: 19, text: '摩西把約瑟的骸骨一同帶去', version: 'unv' },
       ]);
     });
 

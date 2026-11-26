@@ -311,7 +311,7 @@ yarn install
 cp .env.example .env
 
 # 開發模式（熱重載）
-yarn start:dev
+yarn dev
 
 # 建置
 yarn build
