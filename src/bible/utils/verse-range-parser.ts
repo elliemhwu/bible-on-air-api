@@ -123,3 +123,45 @@ function validateRange(
     }
   }
 }
+
+/** Passages are separated by 、，,；; (full- or half-width) or a slash */
+const SEPARATOR_RE = /[、，,；;／/]+/;
+
+/** Full-width digits and punctuation as typed with a Chinese input method */
+function normalize(text: string): string {
+  return text
+    .replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xfee0))
+    .replace(/：/g, ':')
+    .replace(/[－–—~～]/g, '-')
+    .trim();
+}
+
+/**
+ * Several passages in one string: "申6:1-5；利19:9-18", "路4:15-21、賽61",
+ * "羅3:19-24, 4:1-8". A piece without a book continues the book before it,
+ * and a bare chapter ("賽61") means the whole chapter.
+ */
+export function parseVerseRanges(input: string): VerseRange[] {
+  const ranges: VerseRange[] = [];
+  let book: string | undefined;
+  for (const raw of input.split(SEPARATOR_RE)) {
+    let piece = normalize(raw);
+    if (!piece) continue;
+    if (/^\d/.test(piece)) {
+      if (!book) throw new Error(`Cannot identify book name in: "${raw}"`);
+      piece = `${book}${piece}`;
+    }
+    // A whole chapter: 賽61 → 賽61:1-11
+    const whole = !piece.includes(':') && piece.match(/^(.*?)\s*(\d+)$/);
+    if (whole) {
+      const head = parseVerseRange(`${whole[1]}${whole[2]}:1`);
+      const verses = findBibleBook(head.abbrZh)!.chapters[head.chapterStart - 1];
+      ranges.push({ ...head, verseEnd: verses });
+    } else {
+      ranges.push(parseVerseRange(piece));
+    }
+    book = ranges[ranges.length - 1].abbrZh;
+  }
+  if (!ranges.length) throw new Error(`No verse reference in: "${input}"`);
+  return ranges;
+}

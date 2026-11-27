@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -87,6 +88,8 @@ function withVerseRanges<T extends { blocks?: Block[] }>(
 
 @Injectable()
 export class MagazineArticlesService {
+  private readonly logger = new Logger(MagazineArticlesService.name);
+
   constructor(
     @InjectRepository(Article)
     private readonly articleRepo: Repository<Article>,
@@ -263,7 +266,14 @@ export class MagazineArticlesService {
       article.blocks.map(async (block) => {
         if (block.type !== BlockType.VERSE || !block.content) return;
         const { ranges } = block.content as VerseBlockContent;
-        Object.assign(block.content, await this.bibleService.getVerses(ranges));
+        try {
+          Object.assign(block.content, await this.bibleService.getVerses(ranges));
+        } catch (err) {
+          // A failed Bible lookup must not take the whole article down:
+          // the reader shows the reference with a "verses unavailable" note.
+          this.logger.warn(`Verse lookup failed for ${uid} ${date}: ${(err as Error).message}`);
+          Object.assign(block.content, { verses: [], versesUnavailable: true });
+        }
       }),
     );
 
@@ -315,6 +325,8 @@ export class MagazineArticlesService {
         content = { ranges: [] };
       } else if (def.type === BlockType.QUESTIONS) {
         content = { items: [] };
+      } else if (def.type === BlockType.OUTLINE) {
+        content = { book: "", sections: [] };
       } else {
         content = { html: "" };
       }
@@ -392,8 +404,9 @@ export class MagazineArticlesService {
 
     const urlByDate = new Map(items.map((i) => [i.date, i.imageUrl]));
     for (const article of articles) {
-      article.coverImageUrl =
-        urlByDate.get(article.date) ?? article.coverImageUrl;
+      if (urlByDate.has(article.date)) {
+        article.coverImageUrl = urlByDate.get(article.date) ?? null;
+      }
     }
 
     return (await this.articleRepo.save(articles)).map(withStatus);

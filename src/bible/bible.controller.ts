@@ -3,7 +3,7 @@ import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { BIBLE_BOOKS } from './bible-books.constant';
 import { BibleService } from './bible.service';
 import { BibleBook, VerseRange, VerseResultResponse } from './bible.types';
-import { parseVerseRange } from './utils/verse-range-parser';
+import { parseVerseRanges } from './utils/verse-range-parser';
 
 @ApiTags('Bible')
 @Controller('bible')
@@ -19,19 +19,19 @@ export class BibleController {
 
   @Get('verses')
   @ApiOperation({ summary: 'Get verses by reference string' })
-  @ApiQuery({ name: 'ref', description: 'Verse reference, e.g. 出13:19-21 or Exodus 13:19-21', example: '出13:19-21' })
+  @ApiQuery({ name: 'ref', description: 'One or more passages, e.g. 出13:19-21, Exodus 13:19-21 or 申6:1-5；利19:9-18', example: '申6:1-5；利19:9-18' })
   @ApiResponse({ status: 200, description: 'Returns parsed range and verse text' })
   @ApiResponse({ status: 400, description: 'Missing or invalid ref parameter' })
   async getVerses(@Query('ref') ref: string): Promise<VerseResultResponse> {
     if (!ref) throw new BadRequestException('ref query param is required');
 
-    let range: VerseRange;
+    let ranges: VerseRange[];
     try {
-      range = parseVerseRange(ref);
+      ranges = parseVerseRanges(ref);
     } catch (err) {
       throw new BadRequestException(err instanceof Error ? err.message : 'Invalid verse reference');
     }
 
-    return this.bibleService.getVerses([range]);
+    return this.bibleService.getVerses(ranges);
   }
 }

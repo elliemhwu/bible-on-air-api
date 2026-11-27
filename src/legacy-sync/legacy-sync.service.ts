@@ -14,6 +14,7 @@ import {
 import { Article } from "../articles/article.entity";
 import {
   BlockContent,
+  OutlineBlockContent,
   QuestionsBlockContent,
   RichtextBlockContent,
   VerseBlockContent,
@@ -80,6 +81,8 @@ function isEmptyContent(type: BlockType, content: BlockContent | null): boolean 
       return !(content as RichtextBlockContent).html
         ?.replace(/<[^>]*>/g, "")
         .trim();
+    case BlockType.OUTLINE:
+      return !(content as OutlineBlockContent).sections?.length;
   }
 }
 
@@ -283,6 +286,8 @@ export class LegacySyncService {
           return daily && legacy.devotionalHtml ? { html: legacy.devotionalHtml } : null;
         case "richtext:":
           return !daily && legacy.devotionalHtml ? { html: legacy.devotionalHtml } : null;
+        case "outline:本書大綱":
+          return legacy.outline;
         case "richtext:本書大綱":
           return legacy.outlineHtml ? { html: legacy.outlineHtml } : null;
         case "richtext:回應與禱告":
