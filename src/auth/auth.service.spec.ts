@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { User, UserRole, UserStatus } from '../users/user.entity';
 import { AuthService } from './auth.service';
@@ -31,9 +31,19 @@ describe('AuthService', () => {
     await expect(service.login('a@boa.test', 'wrong')).rejects.toThrow(UnauthorizedException);
   });
 
-  it.each([UserStatus.INVITED, UserStatus.DISABLED])('rejects a %s account', async (status) => {
+  it.each([
+    [UserStatus.DISABLED, 'ACCOUNT_DISABLED'],
+    [UserStatus.INVITED, 'ACCOUNT_INVITED'],
+  ])('tells a %s account with the right password why it cannot sign in', async (status, code) => {
     user.status = status;
-    await expect(service.login('a@boa.test', 'right-password')).rejects.toThrow(UnauthorizedException);
+    const err = await service.login('a@boa.test', 'right-password').catch((e) => e);
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect(err.getResponse()).toMatchObject({ code });
+  });
+
+  it('gives an inactive account with a wrong password the usual answer', async () => {
+    user.status = UserStatus.DISABLED;
+    await expect(service.login('a@boa.test', 'wrong')).rejects.toThrow(UnauthorizedException);
   });
 
   describe('JwtStrategy', () => {

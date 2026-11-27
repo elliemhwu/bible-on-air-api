@@ -28,6 +28,9 @@ const ADMIN_ROLES = [UserRole.MANAGER, UserRole.SUPER_ADMIN];
 export const isAdmin = (user: Pick<User, 'roles'>) =>
   user.roles.some((r) => ADMIN_ROLES.includes(r));
 
+/** Super admins run the system; the 同工 page neither lists nor edits them */
+const isSuperAdmin = (user: Pick<User, 'roles'>) => user.roles.includes(UserRole.SUPER_ADMIN);
+
 /** Teams the user leads (負責人) */
 export const leadTeams = (user: Pick<User, 'teams'>): Team[] =>
   Object.values(Team).filter((t) => user.teams?.[t] === 'lead');
@@ -81,7 +84,7 @@ export class UsersService {
     const actor = await this.actor(actorId);
     if (!isAdmin(actor) && leadTeams(actor).length === 0) throw new ForbiddenException();
     const users = await this.repo.find({ order: { name: 'ASC' } });
-    return users.map(publicUser);
+    return users.filter((u) => !isSuperAdmin(u)).map(publicUser);
   }
 
   /**
@@ -185,7 +188,7 @@ export class UsersService {
   async update(uid: string, actorId: string, id: string, dto: UpdateUserDto) {
     const actor = await this.actor(actorId);
     const target = await this.findById(id);
-    if (!target) throw new NotFoundException(`User ${id} not found`);
+    if (!target || isSuperAdmin(target)) throw new NotFoundException(`User ${id} not found`);
 
     const teams = dto.teams ? cleanTeams(dto.teams) : (target.teams ?? {});
     const admin = dto.admin ?? isAdmin(target);
@@ -210,7 +213,7 @@ export class UsersService {
   async reinvite(actorId: string, id: string) {
     const actor = await this.actor(actorId);
     const target = await this.findById(id);
-    if (!target) throw new NotFoundException(`User ${id} not found`);
+    if (!target || isSuperAdmin(target)) throw new NotFoundException(`User ${id} not found`);
     if (target.status !== UserStatus.INVITED) throw new BadRequestException('這個帳號已經加入了');
     const shared = leadTeams(actor).some((t) => target.teams?.[t]);
     if (!isAdmin(actor) && !shared) throw new ForbiddenException();
