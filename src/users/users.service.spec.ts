@@ -74,6 +74,13 @@ describe('UsersService', () => {
       await expect(service.findAll('u-member')).rejects.toThrow(ForbiddenException);
     });
 
+    it('leaves out super admins, who cannot be edited there either', async () => {
+      users.push(makeUser({ id: 'u-root', email: 'root@boa.test', roles: [UserRole.SUPER_ADMIN, UserRole.MANAGER], teams: {} }));
+      const listed = await service.findAll('u-manager');
+      expect(listed.map((u) => u.id)).not.toContain('u-root');
+      await expect(service.update(UID, 'u-manager', 'u-root', { status: UserStatus.DISABLED })).rejects.toThrow(NotFoundException);
+    });
+
     it('never exposes passwords or tokens', async () => {
       const [first] = await service.findAll('u-manager');
       expect(first).not.toHaveProperty('passwordHash');
@@ -130,10 +137,9 @@ describe('UsersService', () => {
       expect(rosterOf(Team.IMAGE)).toEqual(['u-member']);
     });
 
-    it('turns the admin switch into the manager role and keeps super_admin', async () => {
-      users.push(makeUser({ id: 'u-root', email: 'root@boa.test', roles: [UserRole.SUPER_ADMIN], teams: {} }));
-      const res = await service.update(UID, 'u-manager', 'u-root', { admin: true });
-      expect(res.roles.sort()).toEqual([UserRole.MANAGER, UserRole.SUPER_ADMIN].sort());
+    it('turns the admin switch into the manager role, keeping the team roles', async () => {
+      const res = await service.update(UID, 'u-manager', 'u-member', { admin: true });
+      expect(res.roles.sort()).toEqual([UserRole.EDITOR, UserRole.MANAGER].sort());
     });
 
     it('lets a lead add and remove members of their own team', async () => {

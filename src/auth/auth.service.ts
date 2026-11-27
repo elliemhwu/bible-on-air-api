@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { User, UserStatus } from '../users/user.entity';
@@ -19,8 +19,17 @@ export class AuthService {
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch || user.status !== UserStatus.ACTIVE) {
+    if (!isMatch) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+    // Only someone who knows the password learns why the account cannot sign in
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'Forbidden',
+        code: user.status === UserStatus.DISABLED ? 'ACCOUNT_DISABLED' : 'ACCOUNT_INVITED',
+        message: 'Account is not active',
+      });
     }
 
     return this.session(user);

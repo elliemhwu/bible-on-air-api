@@ -35,7 +35,7 @@ docker compose up -d --build
 2. 建立 publisher / publication / 文章模板
 3. 若 `ADMIN_EMAIL`、`ADMIN_PASSWORD` 有值且帳號不存在，建立第一個管理者（super_admin + manager）
 
-正式環境（`NODE_ENV=production`）**不會**建立 `*@boa.test` 測試帳號。
+種子資料不建立任何測試帳號，只有上面這一個管理者；其他同工從「同工」頁邀請。
 
 打開 `http://<主機>:8080`（`WEB_PORT`），用管理者帳號登入 `/login`，再到 `/studio/sync`「從舊網站同步」把舊 Google Site 的內容匯入。
 
